@@ -199,6 +199,15 @@ button { cursor: pointer; }
 .login-submit { min-height: 50px; margin-top: 12px; font-size: 16px; }
 .login-help { margin: 15px 0 0; color: var(--muted); font-size: 12px; }
 .login-disclaimer { max-width: 480px; margin: 18px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
+.simple-header { display: flex; min-height: 68px; align-items: center; justify-content: space-between; padding: 0 7vw; border-bottom: 1px solid var(--line); background: #fff; }
+.simple-brand { color: var(--navy); font-size: 21px; font-weight: 800; text-decoration: none; }
+.simple-account { display: flex; align-items: center; gap: 18px; color: var(--muted); }
+.simple-account form { margin: 0; }
+.simple-logout { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.simple-content { min-height: calc(100vh - 68px); padding: 8vh 7vw; }
+.welcome-card { max-width: 720px; margin: 0 auto; padding: 30px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.welcome-card h1 { margin: 0 0 8px; color: var(--navy); }
+.welcome-card p:last-child { margin-bottom: 0; color: var(--muted); }
 .register-card { width: min(100%, 540px); }
 .register-intro { margin: -8px 0 14px; color: var(--muted); }
 .register-card .prototype-alert { margin-bottom: 16px; text-align: left; }

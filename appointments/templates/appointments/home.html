@@ -1,0 +1,9 @@
+{% extends 'appointments/base.html' %}
+{% block title %}Inicio · GESECIT{% endblock %}
+{% block content %}
+<section class="welcome-card">
+  <p class="eyebrow">Inicio</p>
+  <h1>Bienvenido{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+  <p>Has iniciado sesión correctamente en GESECIT.</p>
+</section>
+{% endblock %}
