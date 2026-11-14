@@ -1,0 +1,45 @@
+﻿{% load static %}
+<link rel="stylesheet" href="{% static 'appointments/patient.css' %}">
+<div class="patient-app" id="patient-app" data-chat-url="{% url 'patient_chat' %}" data-section-url="{% url 'patient_section' 'SECTION' %}">
+  <svg class="patient-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="pi-chat" viewBox="0 0 24 24"><path d="M5 18 3 22v-5a4 4 0 0 1-1-3V7a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4Z"/><path d="M7 10h.01M12 10h.01M17 10h.01"/></symbol>
+    <symbol id="pi-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6M17 2v6M3 11h18M8 16h3"/></symbol>
+    <symbol id="pi-bell" viewBox="0 0 24 24"><path d="M9 21h6M12 2v2M4 18h16l-2-4V9a6 6 0 0 0-12 0v5Z"/></symbol>
+    <symbol id="pi-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 8a3 3 0 0 1 6 0c0 3-3 2-3 6M12 18h.01"/></symbol>
+    <symbol id="pi-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M3 22v-3a6 6 0 0 1 6-6h6a6 6 0 0 1 6 6v3"/></symbol>
+    <symbol id="pi-exit" viewBox="0 0 24 24"><path d="M10 3H4v18h6M9 12h13M17 7l5 5-5 5"/></symbol>
+    <symbol id="pi-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="m15 15 7 7"/></symbol>
+    <symbol id="pi-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4ZM11 13 22 2"/></symbol>
+    <symbol id="pi-robot" viewBox="0 0 80 80"><path d="M40 18V9" stroke="#064a99" stroke-width="5"/><circle cx="40" cy="8" r="5" fill="#064a99"/><rect x="10" y="29" width="60" height="34" rx="15" fill="#0752a4"/><rect x="16" y="22" width="48" height="43" rx="21" fill="white" stroke="#07468e" stroke-width="4"/><rect x="24" y="37" width="32" height="19" rx="9" fill="#0752a4"/><circle cx="32" cy="44" r="2.5" fill="white"/><circle cx="48" cy="44" r="2.5" fill="white"/><path d="M35 49q5 5 10 0" stroke="white" stroke-width="2" fill="none"/></symbol>
+  </defs></svg>
+  <aside class="patient-sidebar">
+    <a class="patient-brand" href="{% url 'home' %}"><svg><use href="#pi-robot"/></svg><span><strong>GESECIT</strong><small>Asistente Digital</small></span></a>
+    <nav aria-label="Navegación del paciente">
+      <button class="patient-nav active" data-section="chat"><svg><use href="#pi-chat"/></svg>Conversación</button>
+      <button class="patient-nav" data-section="requests"><svg><use href="#pi-calendar"/></svg>Mis solicitudes</button>
+      <button class="patient-nav" data-section="notifications"><svg><use href="#pi-bell"/></svg>Notificaciones</button>
+      <button class="patient-nav" data-section="help"><svg><use href="#pi-help"/></svg>Ayuda y preguntas</button>
+      <button class="patient-nav" data-section="profile"><svg><use href="#pi-user"/></svg>Mi perfil</button>
+    </nav>
+    <form class="patient-logout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="patient-nav"><svg><use href="#pi-exit"/></svg>Cerrar sesión</button></form>
+  </aside>
+  <main class="patient-main">
+    <header class="patient-header"><span class="patient-avatar"><svg><use href="#pi-robot"/></svg></span><div><strong>GESECIT</strong><p>Asistente digital · Referencia académica Coosalud EPS</p></div><span class="patient-online"><i></i>En línea</span></header>
+    <section id="patient-chat" class="patient-chat">
+      <div id="patient-messages" class="patient-messages" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="patient-message"><span class="patient-avatar"><svg><use href="#pi-robot"/></svg></span><div class="patient-bubble">¡Hola! 👋 Soy GESECIT, tu asistente digital.<br><span>Puedo ayudarte a:</span></div></div>
+        <div class="patient-actions">
+          <button data-message="solicitar cita"><svg><use href="#pi-calendar"/></svg>Solicitar<br>una cita</button>
+          <button data-message="mis solicitudes"><svg><use href="#pi-search"/></svg>Consultar<br>el estado</button>
+          <button data-message="ver disponibilidad"><svg><use href="#pi-calendar"/></svg>Ver<br>disponibilidad</button>
+          <button data-section="help"><svg><use href="#pi-help"/></svg>Resolver<br>preguntas</button>
+        </div>
+        <div class="patient-message"><span class="patient-avatar"><svg><use href="#pi-robot"/></svg></span><div class="patient-bubble">¿En qué puedo ayudarte hoy?</div></div>
+      </div>
+      <form id="patient-composer" class="patient-composer">{% csrf_token %}<span class="patient-compose-icon"><svg><use href="#pi-chat"/></svg></span><input aria-label="Mensaje para el asistente" name="message" maxlength="1000" placeholder="Escribe tu mensaje aquí..." autocomplete="off" required><button type="submit" aria-label="Enviar mensaje"><svg><use href="#pi-send"/></svg></button></form>
+    </section>
+    <section id="patient-section" class="patient-section" hidden aria-live="polite"></section>
+    <footer class="patient-disclaimer">Prototipo académico · Datos ficticios · Las solicitudes no constituyen citas médicas oficiales.</footer>
+  </main>
+</div>
+<script src="{% static 'appointments/patient.js' %}" defer></script>

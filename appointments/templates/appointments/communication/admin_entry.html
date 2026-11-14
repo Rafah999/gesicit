@@ -1,0 +1,6 @@
+﻿<section class="dashboard-card" style="margin-top:24px;padding:24px">
+<h2>Comunicación con el paciente</h2>
+<p>Envía indicaciones o responde preguntas sobre esta solicitud.</p>
+{% with last_message=appointment_request.communication_messages.last %}{% if last_message %}<p><strong>Último mensaje {% if last_message.from_staff %}de administración{% else %}del paciente{% endif %}:</strong> {{ last_message.body|truncatechars:160 }}</p><p>{{ last_message.created_at|date:'d/m/Y H:i' }}</p>{% endif %}{% endwith %}
+<a class="primary-button" href="{% url 'request_conversation' appointment_request.reference %}">Abrir conversación con el paciente</a>
+</section>

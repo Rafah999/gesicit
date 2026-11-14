@@ -1,0 +1,1 @@
+﻿<a class="outline-button table-action" href="{% url 'request_conversation' item.reference %}">Mensajes{% with latest=item.communication_messages.last %}{% if latest and not latest.from_staff and not latest.read_at %} · Nueva respuesta{% endif %}{% endwith %}</a>

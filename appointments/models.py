@@ -260,3 +260,18 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+# Mensajes administrativos asociados a una solicitud, sin alterar sus estados.
+class RequestMessage(models.Model):
+    request = models.ForeignKey(AppointmentRequest, on_delete=models.CASCADE, related_name="communication_messages")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="sent_request_messages")
+    from_staff = models.BooleanField(default=False)
+    body = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("created_at", "pk")
+
+    def __str__(self):
+        return f"Mensaje de solicitud {self.request_id}"

@@ -15,3 +15,16 @@ urlpatterns = [
     path("administracion/usuarios/<int:user_id>/eliminar/", views.delete_user, name="delete_user"),
     path("", views.home, name="home"),
 ]
+
+# Rutas adicionales de la interfaz del paciente; administración permanece intacta.
+from . import patient_views
+urlpatterns += [
+    path("paciente/chat/", patient_views.patient_chat, name="patient_chat"),
+    path("paciente/seccion/<str:section>/", patient_views.patient_section, name="patient_section"),
+]
+
+# Conversación protegida entre el paciente y el personal autorizado.
+from .communication_views import request_conversation
+urlpatterns += [
+    path("solicitudes/<uuid:reference>/mensajes/", request_conversation, name="request_conversation"),
+]
