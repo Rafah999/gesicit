@@ -1,0 +1,21 @@
+{% extends 'appointments/base.html' %}
+{% block title %}Mis solicitudes · GESECIT{% endblock %}
+{% block page_title %}Mis solicitudes{% endblock %}
+{% block page_subtitle %}Consulta el seguimiento de tus solicitudes{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Seguimiento</p><h2>Historial de solicitudes</h2></div><a class="outline-button" href="{% url 'chat' %}">＋ Solicitar una cita</a></div>
+<div class="prototype-alert compact"><strong>Prototipo académico:</strong> una solicitud o asignación mostrada aquí es simulada y no equivale a una cita confirmada por Coosalud o una IPS.</div>
+{% if requests %}
+  <div class="request-list">
+  {% for item in requests %}
+    <article class="request-card">
+      <div class="request-card-top"><div><span class="muted-label">Solicitud N.º</span><strong>{{ item.reference|slice:":8"|upper }}</strong></div><span class="status status-{{ item.status }}">{{ item.get_status_display }}</span></div>
+      <dl class="request-details"><div><dt>Servicio</dt><dd>{{ item.service.name }}</dd></div><div><dt>Fecha preferida</dt><dd>{{ item.preferred_date|date:"d/m/Y"|default:"Sin preferencia" }}</dd></div><div><dt>IPS preferida</dt><dd>{{ item.preferred_institution.name|default:"Cualquiera disponible" }}</dd></div><div><dt>Registrada</dt><dd>{{ item.created_at|date:"d/m/Y H:i" }}</dd></div></dl>
+      {% for assignment in item.assignments.all %}{% if assignment.state == 'active' %}<div class="assignment-summary"><strong>Asignación simulada vigente</strong><span>{{ assignment.slot.starts_at|date:"d/m/Y · H:i" }} · {{ assignment.slot.institution.name }}</span><small>{{ assignment.slot.professional.full_name }}</small></div>{% endif %}{% endfor %}
+    </article>
+  {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state"><div class="empty-icon">▣</div><h2>Aún no tienes solicitudes</h2><p>Inicia una conversación con GESECIT para solicitar una cita simulada.</p><a class="primary-button button-link" href="{% url 'chat' %}">Ir a conversación</a></div>
+{% endif %}
+{% endblock %}

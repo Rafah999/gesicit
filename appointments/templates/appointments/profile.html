@@ -1,0 +1,22 @@
+{% extends 'appointments/base.html' %}
+{% block title %}Mi perfil · GESECIT{% endblock %}
+{% block page_title %}Mi perfil{% endblock %}
+{% block page_subtitle %}Consulta y actualiza tus datos de contacto{% endblock %}
+{% block content %}
+<section class="profile-card">
+  <p class="eyebrow">Datos de la cuenta</p>
+  <h2>Información del paciente</h2>
+  <p>Estos datos quedan asociados a tu usuario y a las solicitudes de cita que registres.</p>
+  <form method="post" class="profile-form">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="profile-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+    {% endfor %}
+    <button class="primary-button" type="submit">Guardar cambios</button>
+  </form>
+</section>
+{% endblock %}

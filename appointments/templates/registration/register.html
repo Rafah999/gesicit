@@ -1,0 +1,24 @@
+{% extends 'appointments/base.html' %}
+{% block title %}Crear cuenta · GESECIT{% endblock %}
+{% block content %}
+<section class="login-card register-card">
+  <div class="login-brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><rect x="12" y="15" width="40" height="40" rx="7"/><path d="M22 9v13M42 9v13M12 27h40M32 34v15M24.5 41.5h15"/></svg></div>
+  <p class="login-brand">GESECIT</p>
+  <p class="login-tagline">Gestión y seguimiento de citas médicas</p>
+  <h1>Crear cuenta de paciente</h1>
+  <p class="register-intro">Regístrate para guardar tus datos y consultar tus solicitudes desde tu cuenta.</p>
+  <div class="prototype-alert compact"><strong>Prototipo académico:</strong> usa datos ficticios. No ingreses diagnósticos ni información clínica sensible.</div>
+  <form method="post" class="login-form register-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<small class="field-help">{{ field.help_text|safe }}</small>{% endif %}
+      {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    {% endfor %}
+    <button class="primary-button login-submit" type="submit">Crear cuenta</button>
+  </form>
+  <p class="login-help">¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión</a>.</p>
+</section>
+{% endblock %}

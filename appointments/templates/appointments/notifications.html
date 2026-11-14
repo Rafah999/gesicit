@@ -1,0 +1,21 @@
+{% extends 'appointments/base.html' %}
+{% block title %}Notificaciones · GESECIT{% endblock %}
+{% block page_title %}Notificaciones{% endblock %}
+{% block page_subtitle %}Novedades de tus solicitudes simuladas{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Centro de avisos</p><h2>Mantente al tanto de tus solicitudes</h2></div></div>
+<div class="prototype-alert compact">Las notificaciones son internas al prototipo. No enviamos mensajes por SMS, correo ni WhatsApp.</div>
+{% if notifications %}
+  <div class="notification-list">
+  {% for item in notifications %}
+    <article class="notification-card {% if not item.is_read %}unread{% endif %}">
+      <span class="notification-symbol">{% if item.kind == 'request_created' %}▤{% elif item.kind == 'request_updated' %}◷{% else %}▣{% endif %}</span>
+      <div class="notification-copy"><strong>{{ item.title }}</strong><p>{{ item.body }}</p><time>{{ item.created_at|date:"d/m/Y · H:i" }}</time></div>
+      {% if not item.is_read %}<form method="post" action="{% url 'mark_notification_read' item.pk %}">{% csrf_token %}<button class="quiet-button" type="submit">Marcar leída</button></form>{% else %}<span class="read-label">Leída</span>{% endif %}
+    </article>
+  {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state"><div class="empty-icon">♧</div><h2>No tienes notificaciones</h2><p>Cuando cambie una solicitud, aparecerá aquí.</p></div>
+{% endif %}
+{% endblock %}
