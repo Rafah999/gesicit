@@ -10,6 +10,6 @@
   </dl>
 </div>
 {% else %}
-<div class="patient-pending"><svg><use href="#pi-calendar"/></svg><div><strong>{% if appointment.status == 'rejected' %}Solicitud rechazada{% else %}Pendiente de agendamiento{% endif %}</strong><p>{% if appointment.status == 'rejected' %}Consulta la observación de administración para conocer el motivo.{% else %}La fecha y hora de atención aparecerán cuando administración registre una asignación vigente.{% endif %}</p></div></div>
+<div class="patient-pending"><svg><use href="#pi-calendar"/></svg><div><strong>{% if appointment.status == 'rejected' %}Solicitud rechazada{% elif appointment.last_cancelled_appointment %}Cita cancelada{% else %}Pendiente de agendamiento{% endif %}</strong><p>{% if appointment.status == 'rejected' %}Consulta la observación de administración para conocer el motivo.{% elif appointment.last_cancelled_appointment %}La cita del {{ appointment.last_cancelled_appointment.slot.starts_at|date:'d/m/Y · H:i' }} fue cancelada. La solicitud continúa sin una fecha confirmada; administración puede asignar otro horario.{% else %}La fecha y hora de atención aparecerán cuando administración registre una asignación vigente.{% endif %}</p></div></div>
 <dl class="patient-medical-grid patient-preferences"><div><dt>Fecha preferida · sin reserva</dt><dd>{{ appointment.preferred_date|date:'d/m/Y'|default:'Sin preferencia' }}</dd></div><div><dt>IPS preferida</dt><dd>{{ appointment.preferred_institution.name|default:'Sin preferencia' }}</dd></div></dl>
 {% endif %}

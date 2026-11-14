@@ -326,3 +326,41 @@ button { cursor: pointer; }
   .status-form input { grid-column: 1 / -1; grid-row: 2; }
   .login-card { padding: 25px 19px 22px; }
 }
+
+/* Operación del panel administrativo. */
+.admin-metric-grid { grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); }
+.admin-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.admin-form-field { display: grid; min-width: 0; gap: 6px; }
+.admin-form-field label { font-weight: 700; }
+.admin-form-grid .form-control { width: 100%; min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #c8d5e7; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
+.admin-form-grid select[multiple] { min-height: 120px; }
+.admin-form-grid input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); }
+.admin-form-grid > .primary-button { justify-self: start; }
+.slot-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 15px; }
+.assignment-card { grid-column: 1 / -1; }
+.assignment-management-form { max-width: 720px; margin-top: 14px; }
+.assignment-management-form label, .assignment-management-form small, .assignment-management-form button { grid-column: 1 / -1; }
+.assignment-management-form button { justify-self: start; }
+.cancel-assignment-form { margin-top: 14px; text-align: right; }
+.catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-items: start; }
+.catalog-card { min-width: 0; }
+.catalog-list { display: grid; gap: 9px; margin-top: 18px; }
+.catalog-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.catalog-item > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.catalog-item > div:first-child strong { overflow-wrap: anywhere; }
+.catalog-item .status { justify-self: start; }
+.catalog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.catalog-actions form { margin: 0; }
+.catalog-actions .quiet-button, .catalog-actions .small-primary, .catalog-actions .small-danger { min-height: 32px; padding: 5px 9px; font-size: 11px; }
+.catalog-edit-card { max-width: 720px; }
+.schedule-table { min-width: 1000px; }
+.schedule-table form { margin: 0; }
+.schedule-table .quiet-button, .schedule-table .small-primary { min-height: 32px; padding: 5px 9px; font-size: 11px; }
+
+@media (max-width: 850px) {
+  .catalog-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .admin-form-grid, .slot-create-form { grid-template-columns: 1fr; }
+  .catalog-item { align-items: flex-start; flex-direction: column; }
+}

@@ -1,0 +1,53 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Agenda y horarios · GESECIT{% endblock %}
+{% block page_title %}Agenda y horarios{% endblock %}
+{% block page_subtitle %}Crea cupos simulados y administra las citas asignadas{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Administración</p><h2>Disponibilidad de atención</h2></div></div>
+
+<section class="metric-grid admin-metric-grid" aria-label="Resumen de agenda">
+  <article class="metric-card blue"><span class="metric-icon">▦</span><div><strong>{{ total_slots }}</strong><span>Horarios en agenda</span></div></article>
+  <article class="metric-card green"><span class="metric-icon">✓</span><div><strong>{{ available_slots }}</strong><span>Disponibles</span></div></article>
+  <article class="metric-card amber"><span class="metric-icon">◷</span><div><strong>{{ assigned_slots }}</strong><span>Citas asignadas</span></div></article>
+  <article class="metric-card red"><span class="metric-icon">×</span><div><strong>{{ disabled_slots }}</strong><span>Deshabilitados o reservados</span></div></article>
+</section>
+
+<section class="dashboard-card">
+  <div class="dashboard-card-head"><div><span class="section-icon">＋</span><h2>Agregar horario</h2></div></div>
+  <p class="muted-label">Los horarios son simulados. El servicio, la IPS y el profesional deben existir en el Catálogo.</p>
+  <form method="post" class="admin-form-grid slot-create-form">
+    {% csrf_token %}<input type="hidden" name="action" value="create_slot">
+    {% for field in slot_form %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+    {% for error in slot_form.non_field_errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    <button class="primary-button" type="submit">Guardar horario</button>
+  </form>
+</section>
+
+<section class="dashboard-card">
+  <div class="dashboard-card-head"><div><span class="section-icon">▣</span><h2>Horarios registrados</h2></div><span class="muted-label">{{ slots|length }} resultados</span></div>
+  <form method="get" class="filter-toolbar">
+    <label>Buscar servicio, profesional, IPS o usuario<input type="search" name="q" value="{{ query }}" placeholder="Escribe para buscar"></label>
+    <label>Fecha<input type="date" name="fecha" value="{{ selected_date }}"></label>
+    <label>Disponibilidad<select name="estado"><option value="">Todos</option><option value="disponible" {% if selected_status == 'disponible' %}selected{% endif %}>Disponibles</option><option value="asignado" {% if selected_status == 'asignado' %}selected{% endif %}>Asignados</option><option value="deshabilitado" {% if selected_status == 'deshabilitado' %}selected{% endif %}>Deshabilitados</option></select></label>
+    <button class="small-primary filter-submit" type="submit">Filtrar</button>
+    <a class="quiet-button filter-clear" href="{% url 'admin_schedule' %}">Limpiar</a>
+  </form>
+  <div class="table-wrap">
+    <table class="staff-table schedule-table">
+      <thead><tr><th>Fecha y hora</th><th>Servicio y profesional</th><th>IPS</th><th>Estado</th><th>Solicitud</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for slot in slots %}
+        <tr>
+          <td><strong>{{ slot.starts_at|date:"d/m/Y" }}</strong><span class="table-secondary">{{ slot.starts_at|date:"H:i" }}</span></td>
+          <td><strong>{{ slot.service.name }}</strong><span class="table-secondary">{{ slot.professional.full_name }}</span></td>
+          <td>{{ slot.institution.name }}{% if slot.institution.city %}<span class="table-secondary">{{ slot.institution.city }}</span>{% endif %}</td>
+          <td>{% if slot.active_assignment %}<span class="status status-approved">Asignado</span>{% elif slot.is_bookable %}<span class="status status-approved">Disponible</span>{% elif slot.is_available and not slot.is_past %}<span class="status status-in_review">Catálogo inactivo</span>{% elif slot.is_past %}<span class="status">Horario pasado</span>{% else %}<span class="status status-rejected">Deshabilitado</span>{% endif %}</td>
+          <td>{% if slot.active_assignment %}<a href="{% url 'manage_appointment_request' slot.active_assignment.request.reference %}">{{ slot.active_assignment.request.user.get_full_name|default:slot.active_assignment.request.user.username }}</a><span class="table-secondary">{{ slot.active_assignment.request.reference|stringformat:"s"|slice:":8"|upper }}</span>{% else %}<span class="muted-label">—</span>{% endif %}</td>
+          <td>{% if not slot.active_assignment and not slot.is_past %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_slot"><input type="hidden" name="slot_id" value="{{ slot.pk }}"><button class="{% if slot.is_available %}quiet-button{% else %}small-primary{% endif %}" type="submit">{% if slot.is_available %}Deshabilitar{% else %}Habilitar{% endif %}</button></form>{% elif slot.active_assignment %}<span class="muted-label">Gestiona desde la solicitud</span>{% else %}<span class="muted-label">Horario pasado</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="empty-inline">No hay horarios que coincidan con los filtros.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

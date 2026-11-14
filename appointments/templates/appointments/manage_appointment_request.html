@@ -21,10 +21,10 @@
     <dl class="request-detail-list">
       <div><dt>Especialidad</dt><dd>{{ appointment_request.service.name }}</dd></div>
       <div><dt>IPS preferida</dt><dd>{{ appointment_request.preferred_institution.name|default:"Sin preferencia" }}</dd></div>
-      <div><dt>Fecha solicitada</dt><dd>{{ appointment_request.preferred_date|date:"d/m/Y"|default:"Por coordinar" }}</dd></div>
+      <div><dt>Fecha preferida por el paciente</dt><dd>{{ appointment_request.preferred_date|date:"d/m/Y"|default:"Sin preferencia" }}{% if appointment_request.preferred_date %} · no confirmada{% endif %}</dd></div>
       <div><dt>Fecha de registro</dt><dd>{{ appointment_request.created_at|date:"d/m/Y · H:i" }}</dd></div>
       {% if appointment_request.active_assignment %}
-        <div><dt>Cita asignada</dt><dd>{{ appointment_request.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</dd></div>
+        <div><dt>Fecha y hora de la cita confirmada</dt><dd>{{ appointment_request.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</dd></div>
         <div><dt>Profesional</dt><dd>{{ appointment_request.active_assignment.slot.professional.full_name }}</dd></div>
         <div><dt>IPS asignada</dt><dd>{{ appointment_request.active_assignment.slot.institution.name }}</dd></div>
       {% endif %}
@@ -35,6 +35,7 @@
     <div class="dashboard-card-head"><div><span class="section-icon">✓</span><h2>Actualizar estado</h2></div></div>
     <form method="post" class="request-update-form">
       {% csrf_token %}
+      <input type="hidden" name="action" value="status">
       <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
       {{ form.status }}
       {% for error in form.status.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
@@ -45,6 +46,36 @@
     </form>
   </section>
 
+  <section class="dashboard-card assignment-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">◷</span><h2>Agenda de la cita</h2></div></div>
+    {% if appointment_request.active_assignment %}
+      <div class="assignment-summary">
+        <strong>Horario confirmado · {{ appointment_request.active_assignment.slot.starts_at|date:"l d/m/Y · H:i" }}</strong>
+        <span>{{ appointment_request.active_assignment.slot.service.name }} · {{ appointment_request.active_assignment.slot.professional.full_name }}</span>
+        <small>{{ appointment_request.active_assignment.slot.institution.name }}{% if appointment_request.active_assignment.slot.institution.address %} · {{ appointment_request.active_assignment.slot.institution.address }}{% endif %}</small>
+      </div>
+    {% elif appointment_request.status != 'approved' %}
+      <p class="empty-inline">Aprueba la solicitud antes de asignar fecha y hora. La fecha preferida del paciente todavía no es una cita confirmada.</p>
+    {% endif %}
+    {% if appointment_request.status == 'approved' %}
+      <form method="post" class="admin-form-grid assignment-management-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign_slot">
+        <label for="{{ assignment_form.slot.id_for_label }}">{% if appointment_request.active_assignment %}Nuevo horario para reprogramar{% else %}Seleccionar fecha y hora disponibles{% endif %}</label>
+        {{ assignment_form.slot }}
+        {% for error in assignment_form.slot.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        {% if assignment_form.alternative_date_confirmed %}<label class="alternative-date-confirm"><span>{{ assignment_form.alternative_date_confirmed }}</span>{{ assignment_form.alternative_date_confirmed.label }}</label>{% for error in assignment_form.alternative_date_confirmed.errors %}<small class="field-error">{{ error }}</small>{% endfor %}<small class="muted-label">Si eliges otra fecha, marca la casilla solo después de coordinarlo con el paciente.</small>{% endif %}
+        <button class="primary-button" type="submit">{% if appointment_request.active_assignment %}Reprogramar cita{% else %}Confirmar fecha y hora{% endif %}</button>
+      </form>
+    {% endif %}
+    {% if appointment_request.active_assignment %}
+      <form method="post" class="cancel-assignment-form" onsubmit="return confirm('¿Cancelar esta cita? El horario futuro quedará disponible nuevamente.');">
+        {% csrf_token %}<input type="hidden" name="action" value="cancel_assignment">
+        <button class="small-danger" type="submit">Cancelar cita asignada</button>
+      </form>
+    {% endif %}
+  </section>
+
   <section class="dashboard-card history-card">
     <div class="dashboard-card-head"><div><span class="section-icon">◷</span><h2>Historial de cambios</h2></div></div>
     {% if appointment_request.status_history.all %}<ul class="history-list">
@@ -52,6 +83,17 @@
         <li><span class="history-dot"></span><div><strong>{{ entry.get_new_status_display }}</strong>{% if entry.note %}<p>{{ entry.note }}</p>{% endif %}<small>{{ entry.changed_at|date:"d/m/Y H:i" }}{% if entry.changed_by %} · {{ entry.changed_by.get_short_name|default:entry.changed_by.username }}{% endif %}</small></div></li>
       {% endfor %}
     </ul>{% else %}<p class="empty-inline">No hay cambios registrados para esta solicitud.</p>{% endif %}
+  </section>
+
+  <section class="dashboard-card history-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">↻</span><h2>Historial de agenda</h2></div></div>
+    <ul class="history-list">
+      {% for assignment in appointment_request.assignments.all %}
+        {% for event in assignment.history.all %}
+          <li><span class="history-dot"></span><div><strong>{{ event.get_event_display }}</strong><p>{{ event.detail }}</p><small>{{ event.created_at|date:"d/m/Y H:i" }}{% if event.changed_by %} · {{ event.changed_by.get_short_name|default:event.changed_by.username }}{% endif %}</small></div></li>
+        {% endfor %}
+      {% empty %}<li class="empty-inline">Aún no se ha asignado una cita.</li>{% endfor %}
+    </ul>
   </section>
 </div>
 {% include 'appointments/communication/admin_entry.html' %}

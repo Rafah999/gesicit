@@ -6,6 +6,7 @@ from datetime import datetime
 from django.utils import timezone
 
 from .models import (
+    AppointmentAssignment,
     AppointmentRequest,
     AvailabilitySlot,
     Institution,
@@ -30,14 +31,26 @@ def welcome_message():
 
 
 def _request_summary(user):
-    requests = AppointmentRequest.objects.filter(user=user).select_related("service")[:5]
+    requests = AppointmentRequest.objects.filter(user=user).select_related("service").prefetch_related(
+        "assignments__slot"
+    )[:5]
     if not requests:
         return "Aún no tienes solicitudes registradas. Escribe «solicitar cita» para iniciar una."
     lines = ["Estas son tus solicitudes recientes:"]
     for item in requests:
+        active_assignment = next(
+            (assignment for assignment in item.assignments.all() if assignment.state == AppointmentAssignment.State.ACTIVE),
+            None,
+        )
+        if active_assignment:
+            date_summary = f"Cita: {timezone.localtime(active_assignment.slot.starts_at):%d/%m/%Y %H:%M}"
+        elif item.preferred_date:
+            date_summary = f"Preferencia: {item.preferred_date:%d/%m/%Y} (sin confirmar)"
+        else:
+            date_summary = "Fecha por coordinar"
         lines.append(
             f"• {str(item.reference)[:8].upper()} — {item.service.name} — "
-            f"{item.get_status_display()}"
+            f"{item.get_status_display()} — {date_summary}"
         )
     return "\n".join(lines)
 

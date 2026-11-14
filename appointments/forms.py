@@ -3,7 +3,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
 
-from .models import AppointmentRequest, AvailabilitySlot, UserProfile
+from .models import (
+    AppointmentRequest,
+    AvailabilitySlot,
+    Institution,
+    MedicalService,
+    Professional,
+    UserProfile,
+)
 
 User = get_user_model()
 
@@ -124,8 +131,16 @@ class RequestStatusForm(forms.ModelForm):
         labels = {"status": "Nuevo estado"}
 
 
+class AppointmentSlotChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, slot):
+        return (
+            f"{slot.starts_at:%d/%m/%Y %H:%M} · {slot.professional.full_name} · "
+            f"{slot.institution.name}"
+        )
+
+
 class AppointmentAssignmentForm(forms.Form):
-    slot = forms.ModelChoiceField(
+    slot = AppointmentSlotChoiceField(
         queryset=AvailabilitySlot.objects.none(),
         label="Horario disponible",
         empty_label="Selecciona fecha, hora e IPS",
@@ -144,4 +159,117 @@ class AppointmentAssignmentForm(forms.Form):
             slots = slots.filter(service=appointment_request.service)
             if appointment_request.preferred_institution_id:
                 slots = slots.filter(institution=appointment_request.preferred_institution)
+            self.appointment_request = appointment_request
+            if appointment_request.preferred_date:
+                self.fields["alternative_date_confirmed"] = forms.BooleanField(
+                    label="Confirmé con el paciente una fecha distinta a su preferencia",
+                    required=False,
+                    widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+                )
         self.fields["slot"].queryset = slots.order_by("starts_at")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        appointment_request = getattr(self, "appointment_request", None)
+        slot = cleaned_data.get("slot")
+        if appointment_request and appointment_request.preferred_date and slot:
+            selected_date = timezone.localtime(slot.starts_at).date()
+            if (
+                selected_date != appointment_request.preferred_date
+                and not cleaned_data.get("alternative_date_confirmed")
+            ):
+                self.add_error(
+                    "alternative_date_confirmed",
+                    "Confirma que el paciente aceptó cambiar la fecha preferida antes de asignar este horario.",
+                )
+        return cleaned_data
+
+class AvailabilitySlotForm(forms.ModelForm):
+    starts_at = forms.DateTimeField(
+        label="Fecha y hora",
+        input_formats=("%Y-%m-%dT%H:%M",),
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "form-control"},
+            format="%Y-%m-%dT%H:%M",
+        ),
+    )
+
+    class Meta:
+        model = AvailabilitySlot
+        fields = ("service", "institution", "professional", "starts_at")
+        labels = {
+            "service": "Servicio",
+            "institution": "IPS",
+            "professional": "Profesional",
+        }
+        widgets = {
+            "service": forms.Select(attrs={"class": "form-control"}),
+            "institution": forms.Select(attrs={"class": "form-control"}),
+            "professional": forms.Select(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["service"].queryset = MedicalService.objects.filter(is_active=True).order_by("name")
+        self.fields["institution"].queryset = Institution.objects.filter(is_active=True).order_by("name")
+        self.fields["professional"].queryset = Professional.objects.filter(is_active=True).order_by("full_name")
+
+    def clean_starts_at(self):
+        starts_at = self.cleaned_data["starts_at"]
+        if starts_at <= timezone.now():
+            raise forms.ValidationError("El horario debe estar en el futuro.")
+        return starts_at
+
+
+class MedicalServiceForm(forms.ModelForm):
+    class Meta:
+        model = MedicalService
+        fields = ("name", "description", "is_active")
+        labels = {
+            "name": "Nombre del servicio",
+            "description": "Descripción",
+            "is_active": "Activo para nuevas solicitudes",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.TextInput(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+class InstitutionForm(forms.ModelForm):
+    class Meta:
+        model = Institution
+        fields = ("name", "city", "address", "is_active")
+        labels = {
+            "name": "Nombre de la IPS",
+            "city": "Ciudad",
+            "address": "Dirección",
+            "is_active": "Activa para nuevas solicitudes",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.TextInput(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+class ProfessionalForm(forms.ModelForm):
+    class Meta:
+        model = Professional
+        fields = ("full_name", "services", "is_active")
+        labels = {
+            "full_name": "Nombre del profesional",
+            "services": "Servicios que atiende",
+            "is_active": "Activo para nuevas solicitudes",
+        }
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "form-control"}),
+            "services": forms.SelectMultiple(attrs={"class": "form-control", "size": 5}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["services"].queryset = MedicalService.objects.all().order_by("name")

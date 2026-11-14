@@ -1,0 +1,15 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Editar catálogo · GESECIT{% endblock %}
+{% block page_title %}Editar registro{% endblock %}
+{% block page_subtitle %}{{ label }}{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Catálogo</p><h2>{{ item }}</h2></div><a class="quiet-button" href="{% url 'admin_catalog' %}">Volver al catálogo</a></div>
+<section class="dashboard-card catalog-edit-card">
+  <form method="post" class="admin-form-grid">
+    {% csrf_token %}
+    {% for field in form %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+    {% for error in form.non_field_errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    <div class="catalog-actions"><button class="primary-button" type="submit">Guardar cambios</button><a class="quiet-button" href="{% url 'admin_catalog' %}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}

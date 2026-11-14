@@ -6,12 +6,25 @@ urlpatterns = [
     path("registro/", views.register, name="register"),
     path("administracion/", views.admin_dashboard, name="admin_dashboard"),
     path("administracion/solicitudes/", views.appointment_requests, name="admin_requests"),
+    path("administracion/agenda/", views.admin_schedule, name="admin_schedule"),
+    path("administracion/catalogo/", views.admin_catalog, name="admin_catalog"),
+    path(
+        "administracion/catalogo/<str:kind>/<int:object_id>/editar/",
+        views.edit_catalog_item,
+        name="edit_catalog_item",
+    ),
+    path(
+        "administracion/catalogo/<str:kind>/<int:object_id>/estado/",
+        views.toggle_catalog_item,
+        name="toggle_catalog_item",
+    ),
     path(
         "administracion/solicitudes/<uuid:reference>/",
         views.manage_appointment_request,
         name="manage_appointment_request",
     ),
     path("administracion/usuarios/<int:user_id>/rol/", views.change_user_role, name="change_user_role"),
+    path("administracion/usuarios/<int:user_id>/estado/", views.toggle_user_active, name="toggle_user_active"),
     path("administracion/usuarios/<int:user_id>/eliminar/", views.delete_user, name="delete_user"),
     path("", views.home, name="home"),
 ]

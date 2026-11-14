@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class UserProfile(models.Model):
@@ -94,6 +95,16 @@ class AvailabilitySlot(models.Model):
 
     def __str__(self):
         return f"{self.service} · {self.starts_at:%d/%m/%Y %H:%M} · {self.institution} · {self.professional}"
+
+    @property
+    def is_bookable(self):
+        return (
+            self.is_available
+            and self.starts_at > timezone.now()
+            and self.service.is_active
+            and self.institution.is_active
+            and self.professional.is_active
+        )
 
     def clean(self):
         super().clean()

@@ -9,11 +9,17 @@
   <article class="metric-card blue"><span class="metric-icon">♙</span><div><strong>{{ total_users }}</strong><span>Total de cuentas</span></div></article>
   <article class="metric-card green"><span class="metric-icon">＋</span><div><strong>{{ patient_count }}</strong><span>Pacientes</span></div></article>
   <article class="metric-card amber"><span class="metric-icon">▣</span><div><strong>{{ admin_count }}</strong><span>Administradores</span></div></article>
-  <article class="metric-card red"><span class="metric-icon">★</span><div><strong>{{ superuser_count }}</strong><span>Superusuarios</span></div></article>
+  <article class="metric-card red"><span class="metric-icon">★</span><div><strong>{{ superuser_count }}</strong><span>Superusuarios · {{ active_count }} activas</span></div></article>
 </section>
 
 <section class="dashboard-card">
   <div class="dashboard-card-head"><div><span class="section-icon">♙</span><h2>Lista de usuarios</h2></div><span class="muted-label">{{ total_users }} cuentas</span></div>
+  <form method="get" class="filter-toolbar">
+    <label>Buscar usuario, correo o afiliado<input type="search" name="q" value="{{ query }}" placeholder="Nombre, correo o código"></label>
+    <label>Filtrar por rol<select name="rol"><option value="">Todos</option><option value="patient" {% if selected_role == 'patient' %}selected{% endif %}>Pacientes</option><option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Administradores</option><option value="superuser" {% if selected_role == 'superuser' %}selected{% endif %}>Superusuarios</option><option value="inactive" {% if selected_role == 'inactive' %}selected{% endif %}>Inactivos</option></select></label>
+    <button class="small-primary filter-submit" type="submit">Filtrar</button>
+    <a class="quiet-button filter-clear" href="{% url 'admin_dashboard' %}">Limpiar</a>
+  </form>
   <div class="table-wrap">
     <table class="staff-table user-table">
       <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Registro</th><th>Acciones</th></tr></thead>
@@ -22,15 +28,16 @@
           <tr>
             <td><strong>{{ account.get_full_name|default:account.username }}</strong><span class="table-secondary">@{{ account.username }}</span></td>
             <td>{{ account.email|default:"—" }}</td>
-            <td>{% if account.is_superuser %}<span class="role-pill role-superuser">Superusuario</span>{% elif account.is_staff %}<span class="role-pill role-admin">Administrador</span>{% else %}<span class="role-pill role-patient">Paciente</span>{% endif %}</td>
+            <td>{% if account.is_superuser %}<span class="role-pill role-superuser">Superusuario</span>{% elif account.is_staff %}<span class="role-pill role-admin">Administrador</span>{% else %}<span class="role-pill role-patient">Paciente</span>{% endif %}{% if not account.is_active %}<span class="table-secondary">Cuenta desactivada</span>{% endif %}</td>
             <td>{{ account.date_joined|date:"d/m/Y" }}</td>
             <td>
-              {% if account.pk == request.user.pk %}<span class="muted-label">Sesión actual</span>
-              {% elif account.is_superuser %}<span class="muted-label">Cuenta protegida</span>
+              {% if account.pk == request.user.pk %}<span class="muted-label">Sesión actual · protegida</span>
               {% else %}
                 <div class="user-actions">
-                  <form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="admin" type="submit">Hacer admin</button></form>
-                  <form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="superuser" type="submit">Hacer superusuario</button></form>
+                  {% if not account.is_staff %}<form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="admin" type="submit">Hacer admin</button></form>{% endif %}
+                  {% if not account.is_superuser %}<form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="superuser" type="submit">Hacer superusuario</button></form>{% endif %}
+                  {% if account.is_superuser %}<form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="quiet-button" name="role" value="admin" type="submit">Bajar a admin</button></form>{% elif account.is_staff %}<form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="quiet-button" name="role" value="patient" type="submit">Bajar a paciente</button></form>{% endif %}
+                  <form method="post" action="{% url 'toggle_user_active' account.pk %}">{% csrf_token %}<button class="{% if account.is_active %}quiet-button{% else %}small-primary{% endif %}" type="submit">{% if account.is_active %}Desactivar{% else %}Activar{% endif %}</button></form>
                   <form method="post" action="{% url 'delete_user' account.pk %}" onsubmit="return confirm('¿Eliminar esta cuenta y sus solicitudes asociadas?');">{% csrf_token %}<button class="small-danger" type="submit">Eliminar</button></form>
                 </div>
               {% endif %}

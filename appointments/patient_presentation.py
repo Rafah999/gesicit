@@ -5,7 +5,12 @@ def patient_requests(user):
         'status_history', 'assignments__slot__institution', 'assignments__slot__professional')
 
 def present_request(item):
-    item.scheduled_appointment = next((a for a in item.assignments.all() if a.state == AppointmentAssignment.State.ACTIVE), None)
+    assignments = list(item.assignments.all())
+    item.scheduled_appointment = next((a for a in assignments if a.state == AppointmentAssignment.State.ACTIVE), None)
+    item.last_cancelled_appointment = next(
+        (a for a in assignments if a.state == AppointmentAssignment.State.CANCELLED),
+        None,
+    )
     changes = list(item.status_history.all())
     item.latest_observation = next((h for h in reversed(changes) if h.note.strip()), None)
     return item
