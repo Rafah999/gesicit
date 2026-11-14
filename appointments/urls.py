@@ -28,3 +28,13 @@ from .communication_views import request_conversation
 urlpatterns += [
     path("solicitudes/<uuid:reference>/mensajes/", request_conversation, name="request_conversation"),
 ]
+
+# Configuración exclusiva del paciente.
+from .patient_settings_views import patient_settings
+urlpatterns += [path("paciente/configuracion/", patient_settings, name="patient_settings")]
+
+from .patient_profile_views import patient_profile, edit_patient_profile
+urlpatterns += [
+    path("paciente/perfil/", patient_profile, name="patient_profile"),
+    path("paciente/perfil/editar/", edit_patient_profile, name="edit_patient_profile"),
+]

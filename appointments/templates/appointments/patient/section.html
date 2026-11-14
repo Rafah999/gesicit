@@ -1,9 +1,23 @@
 {% if section == 'requests' %}
-<h1>Mis solicitudes</h1><p class="patient-subtitle">Consulta el estado y el seguimiento de tus solicitudes de citas.</p>
-{% for item in items %}<article class="patient-record"><h2>{{ item.service.name }}</h2><span class="patient-status">{{ item.get_status_display }}</span><p>Solicitud N.º {{ item.reference|stringformat:'s'|slice:':8'|upper }} · {{ item.created_at|date:'d/m/Y' }}</p>{% if item.preferred_institution %}<p>IPS preferida: {{ item.preferred_institution.name }}</p>{% endif %}{% if item.preferred_date %}<p>Fecha preferida: {{ item.preferred_date|date:'d/m/Y' }}</p>{% endif %}<details><summary>Ver seguimiento</summary>{% for change in item.status_history.all %}<p>{{ change.changed_at|date:'d/m/Y H:i' }} · {{ change.get_new_status_display }}{% if change.note %} — {{ change.note }}{% endif %}</p>{% empty %}<p>No hay cambios registrados.</p>{% endfor %}</details>{% include 'appointments/communication/patient_entry.html' %}</article>{% empty %}<div class="patient-empty">Aún no tienes solicitudes.<p><button class="patient-primary" data-message="solicitar cita">Solicitar una cita</button></p></div>{% endfor %}
+<div class="patient-page-heading"><span class="patient-heading-icon"><svg><use href="#pi-calendar"/></svg></span><div><h1>Mis solicitudes</h1><p class="patient-subtitle">Tu atención, organizada. Consulta el estado y los datos de tus citas.</p></div></div>
+{% for item in items %}
+<article class="patient-record patient-request-card">
+  <div class="patient-card-top"><div><span class="patient-kicker">Solicitud N.º {{ item.reference|stringformat:'s'|slice:':8'|upper }}</span><h2>{{ item.service.name }}</h2></div><span class="patient-status status-{{ item.status }}">{{ item.get_status_display }}</span></div>
+  {% include 'appointments/patient/appointment_summary.html' with appointment=item %}
+  {% if item.latest_observation %}<div class="patient-observation"><span class="patient-kicker">Observación de administración</span><p>{{ item.latest_observation.note }}</p><time>{{ item.latest_observation.changed_at|date:'d/m/Y · H:i' }}</time></div>{% endif %}
+  <div class="patient-card-footer"><span>Registrada el {{ item.created_at|date:'d/m/Y' }}</span>{% include 'appointments/communication/patient_entry.html' %}</div>
+</article>
+{% empty %}<div class="patient-empty"><h2>Aún no tienes solicitudes</h2><p>Inicia una solicitud desde el asistente para consultar aquí su seguimiento.</p><button type="button" class="patient-primary" data-message="solicitar cita">Solicitar una cita</button></div>{% endfor %}
 {% elif section == 'notifications' %}
-<h1>Notificaciones</h1><p class="patient-subtitle">Mantente informado sobre el estado de tus solicitudes y novedades.</p>
-{% for item in items %}<article class="patient-record {% if not item.is_read %}unread{% endif %}"><h2>{{ item.title }}</h2><p>{{ item.body }}</p><p>{{ item.created_at|date:'d/m/Y H:i' }}</p>{% if not item.is_read %}<form data-patient-form action="{% url 'patient_section' 'notifications' %}" method="post">{% csrf_token %}<input type="hidden" name="notification_id" value="{{ item.pk }}"><button class="patient-primary" type="submit">Marcar como leída</button></form>{% endif %}{% include 'appointments/communication/patient_entry.html' %}</article>{% empty %}<div class="patient-empty">No tienes notificaciones por el momento.</div>{% endfor %}
+<div class="patient-page-heading"><span class="patient-heading-icon"><svg><use href="#pi-bell"/></svg></span><div><h1>Notificaciones</h1><p class="patient-subtitle">Información de administración y novedades sobre tus citas.</p></div></div>
+{% for item in items %}
+<article class="patient-record patient-notification-card {% if not item.is_read %}unread{% endif %}">
+<div class="patient-card-top"><h2>{{ item.title }}</h2>{% if not item.is_read %}<span class="patient-status">Nueva</span>{% endif %}</div>
+<p class="patient-notification-body">{{ item.body }}</p>
+{% if item.observation and item.body != item.observation.note %}<div class="patient-observation"><span class="patient-kicker">Observación de administración</span><p>{{ item.observation.note }}</p></div>{% endif %}
+{% if item.request.scheduled_appointment %}{% include 'appointments/patient/appointment_summary.html' with appointment=item.request %}{% endif %}
+<div class="patient-card-footer"><time>{{ item.created_at|date:'d/m/Y · H:i' }}</time><div class="patient-button-group">{% if not item.is_read %}<form data-patient-form action="{% url 'patient_section' 'notifications' %}" method="post">{% csrf_token %}<input type="hidden" name="notification_id" value="{{ item.pk }}"><button class="patient-secondary" type="submit">Marcar como leída</button></form>{% endif %}{% include 'appointments/communication/patient_entry.html' %}</div></div>
+</article>{% empty %}<div class="patient-empty"><h2>Estás al día</h2><p>Las novedades de tus solicitudes aparecerán aquí.</p></div>{% endfor %}
 {% elif section == 'help' %}
 <h1>Ayuda y preguntas</h1><p class="patient-subtitle">Estamos aquí para orientarte.</p>
 <details class="patient-record" open><summary>¿Cómo solicito una cita?</summary><p>En Conversación, selecciona «Solicitar una cita». El asistente te preguntará el servicio, la IPS y tu fecha preferida. Utiliza únicamente información ficticia.</p><button class="patient-primary" data-message="solicitar cita">Iniciar solicitud</button></details>
@@ -11,6 +25,5 @@
 <details class="patient-record"><summary>¿La solicitud confirma una cita médica real?</summary><p>No. GESECIT es un prototipo académico independiente, sin conexión con Coosalud EPS ni con las IPS. Todos los horarios y las asignaciones son simulados.</p></details>
 <details class="patient-record"><summary>¿Qué puedo escribir en el chat?</summary><p>Puedes escribir «solicitar cita», «mis solicitudes», «ver disponibilidad» o «ayuda». Escribe «cancelar» para abandonar el paso actual. El asistente funciona con reglas predefinidas.</p></details>
 {% elif section == 'profile' %}
-<h1>Mi perfil</h1><p class="patient-subtitle">Consulta y actualiza los datos de tu cuenta de demostración.</p>{% if saved %}<p class="patient-success" role="status">Tus datos se guardaron correctamente.</p>{% endif %}
-<form class="patient-profile" data-patient-form action="{% url 'patient_section' 'profile' %}" method="post">{% csrf_token %}{{ form.as_p }}<button class="patient-primary" type="submit">Guardar cambios</button></form>
+{% include 'appointments/patient/profile_content.html' %}
 {% endif %}

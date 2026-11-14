@@ -1,0 +1,35 @@
+<div class="patient-page-heading"><span class="patient-heading-icon"><svg><use href="#pi-settings"/></svg></span><div><h1>Configuración</h1><p class="patient-subtitle">Personaliza tu experiencia y protege tu cuenta.</p></div></div>
+{% if settings_errors %}<p class="patient-form-error" role="alert" tabindex="-1">No se guardaron los cambios. Revisa los campos señalados.</p>{% endif %}
+{% if settings_saved %}<p class="patient-success" role="status">{{ settings_saved }}</p>{% endif %}
+<div data-patient-preferences hidden data-theme="{{ preferences.theme }}" data-text-size="{{ preferences.text_size }}" data-high-contrast="{{ preferences.high_contrast|yesno:'true,false' }}" data-reduce-motion="{{ preferences.reduce_motion|yesno:'true,false' }}"></div>
+<div class="patient-settings-grid">
+<section class="patient-record patient-settings-card">
+<div class="patient-settings-title"><svg><use href="#pi-user"/></svg><div><h2>Cuenta</h2><p>Información de tu acceso a GESECIT.</p></div></div>
+<dl class="patient-medical-grid"><div><dt>Usuario</dt><dd>{{ user.username }}</dd></div><div><dt>Correo electrónico</dt><dd>{{ user.email|default:'No registrado' }}</dd></div><div><dt>Último inicio de sesión</dt><dd>{{ user.last_login|date:'d/m/Y · H:i'|default:'Sin registro' }}</dd></div><div><dt>Tipo de cuenta</dt><dd>Paciente</dd></div></dl>
+<button class="patient-secondary" type="button" data-patient-url="{% url 'edit_patient_profile' %}">Editar mis datos de perfil</button>
+</section>
+<section class="patient-record patient-settings-card">
+<div class="patient-settings-title"><svg><use href="#pi-settings"/></svg><div><h2>Apariencia y notificaciones</h2><p>Ajustes para leer y navegar con comodidad.</p></div></div>
+<form data-patient-form action="{% url 'patient_settings' %}" method="post" class="patient-settings-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="preferences">
+{{ preferences_form.non_field_errors }}
+{% for field in preferences_form %}<div class="patient-setting-field {% if field.field.widget.input_type == 'checkbox' %}patient-setting-toggle{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+<p class="patient-settings-note">Las preferencias se guardan durante un año en este navegador para tu cuenta. El filtro de notificaciones no elimina ni desactiva los avisos sobre citas. No se envían correos, SMS ni WhatsApp.</p>
+<button class="patient-primary" type="submit">Guardar preferencias</button>
+</form>
+<form data-patient-form action="{% url 'patient_settings' %}" method="post" class="patient-settings-reset">{% csrf_token %}<input type="hidden" name="action" value="reset"><button class="patient-secondary" type="submit">Restaurar preferencias</button></form>
+</section>
+<section class="patient-record patient-settings-card">
+<div class="patient-settings-title"><svg><use href="#pi-lock"/></svg><div><h2>Seguridad</h2><p>Cambia tu contraseña de acceso.</p></div></div>
+<form data-patient-form action="{% url 'patient_settings' %}" method="post" class="patient-settings-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="password">
+{{ password_form.as_p }}<button class="patient-primary" type="submit">Actualizar contraseña</button>
+</form>
+</section>
+<section class="patient-record patient-settings-card">
+<div class="patient-settings-title"><svg><use href="#pi-help"/></svg><div><h2>Privacidad e información</h2><p>Conoce el alcance de esta aplicación.</p></div></div>
+<p>GESECIT es un prototipo académico independiente. Usa únicamente datos ficticios. Las solicitudes y citas mostradas son simuladas y no representan trámites oficiales ante Coosalud EPS ni una IPS.</p>
+<p>Tu cuenta solo permite consultar tus propias solicitudes e información recibida. La gestión de citas corresponde al personal autorizado.</p>
+<button class="patient-secondary" type="button" data-section="help">Consultar ayuda</button>
+<h3>Sesión actual</h3><p>Si usas un equipo compartido, cierra tu sesión al terminar.</p>
+<form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="patient-secondary" type="submit">Cerrar mi sesión</button></form>
+</section>
+</div>

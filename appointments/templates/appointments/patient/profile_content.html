@@ -1,0 +1,12 @@
+﻿<div class="patient-page-heading"><span class="patient-heading-icon"><svg><use href="#pi-user"/></svg></span><div><h1>Mi perfil</h1><p class="patient-subtitle">Tu información de contacto y los datos de tu cuenta.</p></div></div>
+<section class="patient-record patient-profile-overview">
+<div class="patient-profile-identity"><span class="patient-profile-initials">{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}</span><div><span class="patient-kicker">Cuenta de paciente</span><h2>{{ user.get_full_name|default:user.username }}</h2><p>@{{ user.username }}</p></div><span class="patient-status">{% if user.is_active %}Cuenta activa{% else %}Cuenta inactiva{% endif %}</span></div>
+<dl class="patient-medical-grid patient-profile-data">
+<div><dt>Nombres</dt><dd>{{ user.first_name|default:'Sin registrar' }}</dd></div><div><dt>Apellidos</dt><dd>{{ user.last_name|default:'Sin registrar' }}</dd></div>
+<div><dt>Correo electrónico</dt><dd>{{ user.email|default:'Sin registrar' }}</dd></div><div><dt>Teléfono de contacto</dt><dd>{{ profile.phone|default:'Sin registrar' }}</dd></div>
+<div><dt>Código ficticio de afiliado</dt><dd>{{ profile.demo_member_code|default:'Sin registrar' }}</dd></div><div><dt>Miembro desde</dt><dd>{{ user.date_joined|date:'d/m/Y' }}</dd></div>
+</dl>
+<div class="patient-card-footer"><span>Mantén tus datos actualizados para el seguimiento de tus solicitudes.</span><button type="button" class="patient-primary" data-patient-url="{% url 'edit_patient_profile' %}">Editar perfil <span aria-hidden="true">→</span></button></div>
+</section>
+<section class="patient-record"><h2>Seguridad de la cuenta</h2><p>Tu contraseña se administra por separado desde Configuración.</p><button type="button" class="patient-secondary" data-section="settings">Ir a configuración</button></section>
+<p class="patient-settings-note">Este perfil pertenece a un prototipo académico. Utiliza datos ficticios y evita información clínica.</p>

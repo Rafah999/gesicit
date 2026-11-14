@@ -1,4 +1,5 @@
-﻿from django import forms
+from django import forms
+from django.http import HttpResponseForbidden
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -7,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from .models import AppointmentRequest, Notification, RequestMessage
+from .patient_presentation import present_request
 
 class RequestMessageForm(forms.Form):
     body = forms.CharField(label="Mensaje", max_length=2000, strip=True,
@@ -20,6 +22,8 @@ def request_conversation(request, reference):
     if not staff:
         allowed = allowed.filter(user=request.user)
     appointment = get_object_or_404(allowed, reference=reference)
+    if request.method == 'POST' and not staff:
+        return HttpResponseForbidden('El paciente solo puede consultar las comunicaciones de su solicitud.')
     form = RequestMessageForm()
     if request.method == 'POST':
         if request.POST.get('action') == 'read':
@@ -39,11 +43,17 @@ def request_conversation(request, reference):
                 Notification.objects.bulk_create([
                     Notification(user=recipient, request=appointment, kind=Notification.Kind.REQUEST_UPDATED,
                         title='Nuevo mensaje de administración' if staff else 'Nuevo mensaje del paciente',
-                        body=f'Solicitud {short_reference} · {appointment.service.name}: tienes un nuevo mensaje. Abre la conversación para responder.'[:240])
+                        body=f'Solicitud {short_reference} · {appointment.service.name}: tienes un nuevo mensaje. Consulta el mensaje en tus notificaciones.'[:240])
                     for recipient in recipients
                 ])
             messages.success(request, 'Mensaje enviado correctamente.')
             return redirect('request_conversation', reference=reference)
+    if not staff:
+        return render(request, 'appointments/patient/information.html', {
+            'appointment': present_request(appointment),
+            'received_messages': appointment.communication_messages.filter(from_staff=True).select_related('sender'),
+            'patient_detail': True,
+        })
     return render(request, 'appointments/communication/thread.html', {
         'appointment': appointment, 'thread_messages': appointment.communication_messages.select_related('sender'),
         'message_form': form, 'staff_view': staff,

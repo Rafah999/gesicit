@@ -1,8 +1,10 @@
-﻿from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
+from .patient_preferences import preferences_for
+from .patient_presentation import patient_requests, present_request, present_notification
 from .chat_logic import reply_to_message
 from .forms import PatientProfileForm
 from .models import AppointmentRequest, Notification, MedicalService, Institution
@@ -36,15 +38,24 @@ def patient_section(request, section):
         return JsonResponse({'error': 'Sección no encontrada.'}, status=404)
     context = {'section': section}
     if section == 'requests':
-        context['items'] = AppointmentRequest.objects.filter(user=request.user).select_related('service', 'preferred_institution').prefetch_related('status_history')
+        context['items'] = [present_request(item) for item in patient_requests(request.user)]
     elif section == 'notifications':
-        context['items'] = Notification.objects.filter(user=request.user)
+        context['items'] = [present_notification(item) for item in Notification.objects.filter(user=request.user).select_related('request__service').prefetch_related('request__status_history', 'request__assignments__slot__institution', 'request__assignments__slot__professional')]
         if request.method == 'POST':
             Notification.objects.filter(user=request.user, pk=request.POST.get('notification_id')).update(is_read=True)
+            for item in context['items']:
+                if str(item.pk) == request.POST.get('notification_id'):
+                    item.is_read = True
+        preferences = preferences_for(request)
+        if preferences['unread_only']:
+            context['items'] = [item for item in context['items'] if not item.is_read]
+        if preferences['notification_order'] == 'oldest':
+            context['items'].reverse()
     elif section == 'profile':
-        form = PatientProfileForm(request.POST if request.method == 'POST' else None, instance=request.user)
-        if request.method == 'POST' and form.is_valid():
-            form.save()
-            context['saved'] = True
-        context['form'] = form
-    return render(request, 'appointments/patient/section.html', context)
+        if request.method != 'GET':
+            return JsonResponse({'error':'Utiliza la pantalla Editar perfil.'}, status=405)
+        from .models import UserProfile
+        context['profile'] = UserProfile.objects.filter(user=request.user).first()
+    response = render(request, 'appointments/patient/section.html', context)
+    response['Cache-Control'] = 'no-store'
+    return response

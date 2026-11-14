@@ -15,3 +15,16 @@ def create_gesecit_profile(sender, instance, created, **kwargs):
         else:
             role = UserProfile.Role.AFFILIATE
         UserProfile.objects.get_or_create(user=instance, defaults={"role": role})
+
+# Entregar al paciente la observación sin alterar la gestión administrativa.
+from .models import RequestStatusHistory, Notification
+
+@receiver(post_save, sender=RequestStatusHistory)
+def notify_patient_observation(sender, instance, created, raw=False, **kwargs):
+    if created and not raw and instance.note.strip():
+        Notification.objects.create(
+            user_id=instance.request.user_id, request_id=instance.request_id,
+            kind=Notification.Kind.REQUEST_UPDATED,
+            title="Observación sobre tu solicitud",
+            body=instance.note,
+        )

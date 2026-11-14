@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   'use strict';
   const app = document.getElementById('patient-app');
   if (!app) return;
@@ -33,10 +33,10 @@
     if (name === 'chat') { input.focus(); return; }
     section.textContent = 'Cargando…';
     try {
-      const response = await fetch(app.dataset.sectionUrl.replace('SECTION', name), {credentials: 'same-origin'});
+      const response = await fetch(name === 'settings' ? app.dataset.settingsUrl : app.dataset.sectionUrl.replace('SECTION', name), {credentials: 'same-origin', cache:'no-store'});
       if (!response.ok || response.redirected) throw new Error('No se pudo cargar esta sección. Comprueba tu sesión e inténtalo de nuevo.');
       const html = await response.text();
-      if (current === navigation) section.innerHTML = html;
+      if (current === navigation) { section.innerHTML = html; document.dispatchEvent(new Event('patient-content-updated')); }
     } catch (error) { if (current === navigation) section.textContent = error.message; }
   }
   async function send(text) {
@@ -67,12 +67,50 @@
   composer.addEventListener('submit', event => { event.preventDefault(); send(input.value); });
   section.addEventListener('submit', async event => {
     const form = event.target; if (!form.matches('[data-patient-form]')) return;
-    event.preventDefault(); const button = form.querySelector('button[type=submit]'); if (button) button.disabled = true;
+    event.preventDefault();
+    if (form.dataset.saving === 'true') return;
+    form.dataset.saving = 'true';
+    const originNavigation = navigation;
+    const button = form.querySelector('button[type=submit]'); if (button) button.disabled = true;
     try {
-      const response = await fetch(form.action, {method:'POST', headers:{'X-CSRFToken':token}, body:new FormData(form)});
+      const response = await fetch(form.getAttribute('action'), {method:'POST', headers:{'X-CSRFToken':token}, body:new FormData(form)});
       if (!response.ok || response.redirected) throw new Error('No se pudieron guardar los cambios. Revisa tu sesión.');
-      section.innerHTML = await response.text();
-    } catch (error) { const notice = document.createElement('p'); notice.className = 'patient-error'; notice.textContent = error.message; form.prepend(notice); if(button) button.disabled = false; }
+      const result = await response.text();
+      if (originNavigation !== navigation || !form.isConnected) return;
+      section.innerHTML = result;
+      const feedback = section.querySelector('[role=alert], [role=status]');
+      if (feedback) { feedback.setAttribute('tabindex','-1'); feedback.focus(); }
+      document.dispatchEvent(new Event('patient-content-updated'));
+    } catch (error) { const notice = document.createElement('p'); notice.className = 'patient-error'; notice.textContent = error.message; form.prepend(notice); if(button) button.disabled = false; form.dataset.saving = 'false'; }
   });
   app.querySelectorAll('.patient-sidebar button').forEach(button => { button.setAttribute('aria-label',button.textContent.trim()); button.title = button.textContent.trim(); });
+})();
+// Botones de consulta del paciente: no ejecutan acciones administrativas.
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-patient-url]');
+  if (button) window.location.assign(button.dataset.patientUrl);
+});
+// Preferencias exclusivas del paciente, sincronizadas con la respuesta firmada.
+(() => {
+  const app = document.getElementById('patient-app');
+  if (!app) return;
+  let preferences = JSON.parse(document.getElementById('patient-initial-preferences').textContent);
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  function apply() {
+    const dark = preferences.theme === 'dark' || (preferences.theme === 'system' && media.matches);
+    app.dataset.theme = dark ? 'dark' : 'light';
+    app.dataset.textSize = preferences.text_size;
+    app.classList.toggle('patient-high-contrast', preferences.high_contrast);
+    app.classList.toggle('patient-reduce-motion', preferences.reduce_motion);
+  }
+  media.addEventListener('change', apply);
+  document.addEventListener('patient-content-updated', () => {
+    const state = app.querySelector('[data-patient-preferences]');
+    if (state) {
+      preferences = {theme:state.dataset.theme, text_size:state.dataset.textSize,
+        high_contrast:state.dataset.highContrast === 'true', reduce_motion:state.dataset.reduceMotion === 'true'};
+      apply();
+    }
+  });
+  apply();
 })();

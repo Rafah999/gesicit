@@ -1,0 +1,9 @@
+﻿<div class="patient-page-heading"><span class="patient-heading-icon"><svg><use href="#pi-user"/></svg></span><div><span class="patient-kicker">Mi cuenta</span><h1>Editar perfil</h1><p class="patient-subtitle">Actualiza tu información personal y de contacto.</p></div></div>
+<section class="patient-record patient-edit-card">
+<form action="{% url 'edit_patient_profile' %}" method="post" class="patient-settings-form patient-edit-form">{% csrf_token %}
+{% if profile_form.errors %}<div class="patient-form-error" role="alert">Revisa los campos señalados. Tus cambios aún no se han guardado.</div>{% endif %}
+{{ profile_form.non_field_errors }}
+<div class="patient-edit-grid">{% for field in profile_form %}<div class="patient-setting-field">{{ field.label_tag }}{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+<p class="patient-settings-note">Los cambios no modifican tus solicitudes, tu nombre de usuario ni tus permisos.</p>
+<div class="patient-detail-actions"><button type="button" class="patient-secondary" data-patient-url="{% url 'patient_profile' %}">Cancelar</button><button type="submit" class="patient-primary">Guardar cambios</button></div>
+</form></section>
