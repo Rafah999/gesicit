@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
+from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,6 +22,12 @@ from .models import (
 )
 
 User = get_user_model()
+
+
+@require_http_methods(["GET", "HEAD"])
+def health_check(request):
+    """Minimal public endpoint for external uptime monitors."""
+    return HttpResponse("ok", content_type="text/plain")
 
 
 class RoleBasedLoginView(LoginView):
