@@ -1,0 +1,6 @@
+﻿<section class="patient-record patient-message-compose">
+<h2>Enviar mensaje a administración</h2><p>Consulta o aclara información relacionada con esta solicitud. La gestión y los cambios de estado corresponden al administrador.</p>
+<form class="patient-settings-form" method="post" action="{% url 'request_conversation' appointment.reference %}">{% csrf_token %}
+{{ message_form.as_p }}<p class="patient-settings-note">Máximo 2000 caracteres. Usa datos de prueba y evita información clínica.</p><button type="submit" class="patient-primary">Enviar mensaje al administrador</button></form>
+<form method="post" action="{% url 'request_conversation' appointment.reference %}" class="patient-settings-reset">{% csrf_token %}<input type="hidden" name="action" value="read"><button type="submit" class="patient-secondary">Marcar mensajes recibidos como leídos</button></form>
+</section>
