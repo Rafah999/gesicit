@@ -22,8 +22,6 @@ def request_conversation(request, reference):
     if not staff:
         allowed = allowed.filter(user=request.user)
     appointment = get_object_or_404(allowed, reference=reference)
-    if request.method == 'POST' and not staff:
-        return HttpResponseForbidden('El paciente solo puede consultar las comunicaciones de su solicitud.')
     form = RequestMessageForm()
     if request.method == 'POST':
         if request.POST.get('action') == 'read':
@@ -43,7 +41,7 @@ def request_conversation(request, reference):
                 Notification.objects.bulk_create([
                     Notification(user=recipient, request=appointment, kind=Notification.Kind.REQUEST_UPDATED,
                         title='Nuevo mensaje de administración' if staff else 'Nuevo mensaje del paciente',
-                        body=f'Solicitud {short_reference} · {appointment.service.name}: tienes un nuevo mensaje. Consulta el mensaje en tus notificaciones.'[:240])
+                        body=f"Solicitud {short_reference} · {appointment.service.name}: {form.cleaned_data['body']}"[:240])
                     for recipient in recipients
                 ])
             messages.success(request, 'Mensaje enviado correctamente.')
@@ -51,8 +49,8 @@ def request_conversation(request, reference):
     if not staff:
         return render(request, 'appointments/patient/information.html', {
             'appointment': present_request(appointment),
-            'received_messages': appointment.communication_messages.filter(from_staff=True).select_related('sender'),
-            'patient_detail': True,
+            'received_messages': appointment.communication_messages.select_related('sender'),
+            'patient_detail': True, 'message_form':form,
         })
     return render(request, 'appointments/communication/thread.html', {
         'appointment': appointment, 'thread_messages': appointment.communication_messages.select_related('sender'),
