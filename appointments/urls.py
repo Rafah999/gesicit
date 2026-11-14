@@ -38,3 +38,6 @@ urlpatterns += [
     path("paciente/perfil/", patient_profile, name="patient_profile"),
     path("paciente/perfil/editar/", edit_patient_profile, name="edit_patient_profile"),
 ]
+
+from .notification_views import patient_notification_feed
+urlpatterns += [path("paciente/notificaciones/nuevas/", patient_notification_feed, name="patient_notification_feed")]

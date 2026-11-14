@@ -2,7 +2,8 @@
 {% patient_preferences as patient_options %}
 {{ patient_options|json_script:"patient-initial-preferences" }}
 <link rel="stylesheet" href="{% static 'appointments/patient.css' %}">
-<div class="patient-app" id="patient-app" data-settings-url="{% url 'patient_settings' %}" data-chat-url="{% url 'patient_chat' %}" data-section-url="{% url 'patient_section' 'SECTION' %}">
+<link rel="stylesheet" href="{% static 'appointments/patient-live.css' %}">
+<div class="patient-app" id="patient-app" data-notification-feed="{% url 'patient_notification_feed' %}" data-patient-id="{{ user.pk }}" data-settings-url="{% url 'patient_settings' %}" data-chat-url="{% url 'patient_chat' %}" data-section-url="{% url 'patient_section' 'SECTION' %}">
   <svg class="patient-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
     <symbol id="pi-chat" viewBox="0 0 24 24"><path d="M5 18 3 22v-5a4 4 0 0 1-1-3V7a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4Z"/><path d="M7 10h.01M12 10h.01M17 10h.01"/></symbol>
     <symbol id="pi-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6M17 2v6M3 11h18M8 16h3"/></symbol>
@@ -48,3 +49,5 @@
   </main>
 </div>
 <script src="{% static 'appointments/patient.js' %}" defer></script>
+
+<script src="{% static 'appointments/patient-live.js' %}" defer></script>
