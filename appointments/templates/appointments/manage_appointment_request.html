@@ -1,7 +1,7 @@
 {% extends 'appointments/admin_base.html' %}
 {% block title %}Gestionar solicitud · GESECIT{% endblock %}
 {% block page_title %}Gestionar solicitud de cita{% endblock %}
-{% block page_subtitle %}Revisa la información y actualiza su estado{% endblock %}
+{% block page_subtitle %}Revisa la solicitud y, al elegir un horario, apruébala y registra la cita en un solo paso{% endblock %}
 {% block content %}
 <div class="section-intro"><div><p class="eyebrow">Solicitud {{ appointment_request.reference|slice:":8"|upper }}</p><h2>Información de la solicitud</h2></div><a class="quiet-button" href="{% url 'admin_requests' %}">Volver a solicitudes</a></div>
 
@@ -54,19 +54,32 @@
         <span>{{ appointment_request.active_assignment.slot.service.name }} · {{ appointment_request.active_assignment.slot.professional.full_name }}</span>
         <small>{{ appointment_request.active_assignment.slot.institution.name }}{% if appointment_request.active_assignment.slot.institution.address %} · {{ appointment_request.active_assignment.slot.institution.address }}{% endif %}</small>
       </div>
-    {% elif appointment_request.status != 'approved' %}
-      <p class="empty-inline">Aprueba la solicitud antes de asignar fecha y hora. La fecha preferida del paciente todavía no es una cita confirmada.</p>
+    {% else %}
+      <p class="muted-label">La fecha que indicó el paciente es una preferencia; la cita queda confirmada cuando elijas un horario disponible.</p>
     {% endif %}
-    {% if appointment_request.status == 'approved' %}
+    {% if appointment_request.status != 'rejected' %}
+      <form method="get" class="calendar-day-picker">
+        <label for="appointment-day">Día de atención</label>
+        <div><input id="appointment-day" type="date" name="fecha_cita" value="{{ selected_appointment_date }}" required><button class="small-primary" type="submit">Ver horarios</button></div>
+      </form>
       <form method="post" class="admin-form-grid assignment-management-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="assign_slot">
-        <label for="{{ assignment_form.slot.id_for_label }}">{% if appointment_request.active_assignment %}Nuevo horario para reprogramar{% else %}Seleccionar fecha y hora disponibles{% endif %}</label>
-        {{ assignment_form.slot }}
+        {{ assignment_form.appointment_date }}
+        <strong>{% if appointment_request.active_assignment %}Selecciona un nuevo horario para reprogramar{% else %}Horarios disponibles · bloques de 30 minutos{% endif %}</strong>
+        <div class="calendar-slot-list">
+          {% for choice in assignment_form.slot %}
+            <label class="calendar-slot-choice">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+          {% empty %}
+            <p class="empty-inline">No hay horarios disponibles para este día. Elige otro día o crea disponibilidad en Agenda.</p>
+          {% endfor %}
+        </div>
         {% for error in assignment_form.slot.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
         {% if assignment_form.alternative_date_confirmed %}<label class="alternative-date-confirm"><span>{{ assignment_form.alternative_date_confirmed }}</span>{{ assignment_form.alternative_date_confirmed.label }}</label>{% for error in assignment_form.alternative_date_confirmed.errors %}<small class="field-error">{{ error }}</small>{% endfor %}<small class="muted-label">Si eliges otra fecha, marca la casilla solo después de coordinarlo con el paciente.</small>{% endif %}
-        <button class="primary-button" type="submit">{% if appointment_request.active_assignment %}Reprogramar cita{% else %}Confirmar fecha y hora{% endif %}</button>
+        <button class="primary-button" type="submit">{% if appointment_request.active_assignment %}Guardar reprogramación{% else %}Aprobar y registrar cita{% endif %}</button>
       </form>
+    {% else %}
+      <p class="empty-inline">La solicitud está rechazada. Cambia su estado a revisión antes de agendar una cita.</p>
     {% endif %}
     {% if appointment_request.active_assignment %}
       <form method="post" class="cancel-assignment-form" onsubmit="return confirm('¿Cancelar esta cita? El horario futuro quedará disponible nuevamente.');">

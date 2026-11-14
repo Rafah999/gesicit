@@ -11,17 +11,19 @@ from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from .forms import (
     AppointmentAssignmentForm,
-    AvailabilitySlotForm,
+    AvailabilityRangeForm,
     InstitutionForm,
     MedicalServiceForm,
     PatientRegistrationForm,
     ProfessionalForm,
     RequestStatusForm,
 )
+from .constants import APPOINTMENT_SLOT_MINUTES
 from .models import (
     AppointmentAssignment,
     AppointmentRequest,
@@ -36,6 +38,17 @@ from .models import (
 )
 
 User = get_user_model()
+
+
+def _request_status_form(data=None, instance=None):
+    form = RequestStatusForm(data, instance=instance)
+    if instance is not None and instance.status != AppointmentRequest.Status.APPROVED:
+        form.fields["status"].choices = [
+            (value, label)
+            for value, label in AppointmentRequest.Status.choices
+            if value != AppointmentRequest.Status.APPROVED
+        ]
+    return form
 
 
 class RoleBasedLoginView(LoginView):
@@ -260,15 +273,46 @@ def toggle_catalog_item(request, kind, object_id):
 @user_passes_test(lambda user: user.is_active and user.is_staff)
 @require_http_methods(["GET", "POST"])
 def admin_schedule(request):
-    slot_form = AvailabilitySlotForm()
+    selected_date = parse_date(request.GET.get("fecha", "")) or timezone.localdate()
+    slot_form = AvailabilityRangeForm(initial={"appointment_date": selected_date})
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "create_slot":
-            slot_form = AvailabilitySlotForm(request.POST)
+        if action == "create_range":
+            slot_form = AvailabilityRangeForm(request.POST)
+            selected_date = parse_date(request.POST.get("appointment_date", "")) or selected_date
             if slot_form.is_valid():
-                slot_form.save()
-                messages.success(request, "El horario quedó agregado a la agenda.")
-                return redirect("admin_schedule")
+                data = slot_form.cleaned_data
+                local_start = datetime.combine(data["appointment_date"], data["start_time"])
+                local_end = datetime.combine(data["appointment_date"], data["end_time"])
+                created_count = 0
+                existing_count = 0
+                with transaction.atomic():
+                    starts_at = timezone.make_aware(local_start, timezone.get_current_timezone())
+                    end_at = timezone.make_aware(local_end, timezone.get_current_timezone())
+                    while starts_at < end_at:
+                        _, created = AvailabilitySlot.objects.get_or_create(
+                            professional=data["professional"],
+                            starts_at=starts_at,
+                            defaults={
+                                "service": data["service"],
+                                "institution": data["institution"],
+                                "is_available": True,
+                            },
+                        )
+                        created_count += int(created)
+                        existing_count += int(not created)
+                        starts_at += timedelta(minutes=APPOINTMENT_SLOT_MINUTES)
+                if created_count:
+                    messages.success(
+                        request,
+                        f"Se agregaron {created_count} bloques de 30 minutos a la agenda.",
+                    )
+                if existing_count:
+                    messages.warning(
+                        request,
+                        f"Se omitieron {existing_count} bloques que ya existían para ese profesional.",
+                    )
+                return redirect(f"{reverse('admin_schedule')}?fecha={data['appointment_date'].isoformat()}")
         elif action == "toggle_slot":
             slot = get_object_or_404(
                 AvailabilitySlot.objects.select_related("service", "institution", "professional"),
@@ -286,10 +330,10 @@ def admin_schedule(request):
                 slot.is_available = not slot.is_available
                 slot.save(update_fields=("is_available",))
                 messages.success(request, "Se actualizó la disponibilidad del horario.")
-            return redirect("admin_schedule")
+            return redirect(f"{reverse('admin_schedule')}?fecha={selected_date.isoformat()}")
         else:
             messages.error(request, "Acción de agenda no válida.")
-            return redirect("admin_schedule")
+            return redirect(f"{reverse('admin_schedule')}?fecha={selected_date.isoformat()}")
 
     slots = AvailabilitySlot.objects.select_related(
         "service", "institution", "professional"
@@ -322,10 +366,8 @@ def admin_schedule(request):
         slots = slots.filter(active_assignment_count__gt=0)
     elif status_filter == "deshabilitado":
         slots = slots.filter(is_available=False, active_assignment_count=0)
-    date_filter = request.GET.get("fecha", "")
-    parsed_date = parse_date(date_filter)
-    if parsed_date:
-        slots = slots.filter(starts_at__date=parsed_date)
+    slots = slots.filter(starts_at__date=selected_date)
+    date_filter = selected_date.isoformat()
     query = request.GET.get("q", "").strip()
     if query:
         slots = slots.filter(
@@ -355,6 +397,9 @@ def admin_schedule(request):
         "disabled_slots": all_slots.filter(is_available=False).count(),
         "selected_status": status_filter,
         "selected_date": date_filter,
+        "selected_date_display": selected_date.strftime("%d/%m/%Y"),
+        "previous_date": (selected_date - timedelta(days=1)).isoformat(),
+        "next_date": (selected_date + timedelta(days=1)).isoformat(),
         "query": query,
     }
     return render(request, "appointments/admin_schedule.html", context)
@@ -475,13 +520,20 @@ def manage_appointment_request(request, reference):
         ),
         None,
     )
+    selected_appointment_date = (
+        parse_date(request.GET.get("fecha_cita", ""))
+        or parse_date(request.POST.get("appointment_date", ""))
+        or appointment_request.preferred_date
+        or timezone.localdate()
+    )
 
     if request.method == "POST":
         action = request.POST.get("action", "status")
         if action == "status":
-            form = RequestStatusForm(request.POST, instance=appointment_request)
+            form = _request_status_form(request.POST, instance=appointment_request)
             assignment_form = AppointmentAssignmentForm(
                 appointment_request=appointment_request,
+                selected_date=selected_appointment_date,
             )
             if form.is_valid():
                 new_status = form.cleaned_data["status"]
@@ -520,13 +572,14 @@ def manage_appointment_request(request, reference):
                     messages.success(request, "Se actualizó el estado y quedó en el historial.")
                     return redirect("manage_appointment_request", reference=reference)
         elif action == "assign_slot":
-            form = RequestStatusForm(instance=appointment_request)
+            form = _request_status_form(instance=appointment_request)
             assignment_form = AppointmentAssignmentForm(
                 request.POST,
                 appointment_request=appointment_request,
+                selected_date=selected_appointment_date,
             )
-            if appointment_request.status != AppointmentRequest.Status.APPROVED:
-                messages.error(request, "Primero cambia el estado de la solicitud a Aprobada.")
+            if appointment_request.status == AppointmentRequest.Status.REJECTED:
+                messages.error(request, "No se puede agendar una solicitud rechazada. Cámbiala a revisión primero.")
             elif assignment_form.is_valid():
                 try:
                     with transaction.atomic():
@@ -534,14 +587,18 @@ def manage_appointment_request(request, reference):
                         slot = AvailabilitySlot.objects.select_for_update().select_related(
                             "service", "institution", "professional"
                         ).get(pk=assignment_form.cleaned_data["slot"].pk)
-                        if locked_request.status != AppointmentRequest.Status.APPROVED:
-                            raise ValidationError("La solicitud debe estar aprobada antes de asignar un horario.")
+                        if locked_request.status == AppointmentRequest.Status.REJECTED:
+                            raise ValidationError("No se puede agendar una solicitud rechazada.")
                         if not slot.is_available or slot.starts_at <= timezone.now():
                             raise ValidationError("Ese horario ya no está disponible. Actualiza la página y selecciona otro.")
                         if slot.service_id != locked_request.service_id:
                             raise ValidationError("El horario debe corresponder al servicio solicitado.")
                         if locked_request.preferred_institution_id and slot.institution_id != locked_request.preferred_institution_id:
                             raise ValidationError("El horario no corresponde a la IPS preferida.")
+
+                        previous_status = locked_request.status
+                        locked_request.status = AppointmentRequest.Status.APPROVED
+                        locked_request.save(update_fields=("status", "updated_at"))
 
                         previous = AppointmentAssignment.objects.select_for_update().filter(
                             request=locked_request, state=AppointmentAssignment.State.ACTIVE
@@ -584,6 +641,17 @@ def manage_appointment_request(request, reference):
                             detail=f"Cita asignada para {timezone.localtime(slot.starts_at):%d/%m/%Y %H:%M}.",
                             changed_by=request.user,
                         )
+                        if previous_status != AppointmentRequest.Status.APPROVED:
+                            RequestStatusHistory.objects.create(
+                                request=locked_request,
+                                previous_status=previous_status,
+                                new_status=AppointmentRequest.Status.APPROVED,
+                                note=(
+                                    "Cita aprobada y agendada para "
+                                    f"{timezone.localtime(slot.starts_at):%d/%m/%Y %H:%M}."
+                                ),
+                                changed_by=request.user,
+                            )
                         Notification.objects.create(
                             user=locked_request.user,
                             request=locked_request,
@@ -596,16 +664,22 @@ def manage_appointment_request(request, reference):
                                 f"{slot.institution.name}, profesional {slot.professional.full_name}."
                             )[:240],
                         )
-                    messages.success(request, "La cita quedó asignada y el horario se reservó.")
+                    messages.success(
+                        request,
+                        "La solicitud quedó aprobada, la fecha y hora se registraron y el horario se reservó."
+                        if not previous
+                        else "La nueva fecha y hora quedaron registradas y el horario anterior se liberó.",
+                    )
                     return redirect("manage_appointment_request", reference=reference)
                 except ValidationError as error:
                     messages.error(request, " ".join(error.messages))
                 except IntegrityError:
                     messages.error(request, "Ese horario acaba de ser asignado a otra solicitud.")
         elif action == "cancel_assignment":
-            form = RequestStatusForm(instance=appointment_request)
+            form = _request_status_form(instance=appointment_request)
             assignment_form = AppointmentAssignmentForm(
                 appointment_request=appointment_request,
+                selected_date=selected_appointment_date,
             )
             try:
                 with transaction.atomic():
@@ -644,14 +718,16 @@ def manage_appointment_request(request, reference):
             except ValidationError as error:
                 messages.error(request, " ".join(error.messages))
         else:
-            form = RequestStatusForm(instance=appointment_request)
+            form = _request_status_form(instance=appointment_request)
             assignment_form = AppointmentAssignmentForm(
                 appointment_request=appointment_request,
+                selected_date=selected_appointment_date,
             )
     else:
-        form = RequestStatusForm(instance=appointment_request)
+        form = _request_status_form(instance=appointment_request)
         assignment_form = AppointmentAssignmentForm(
             appointment_request=appointment_request,
+            selected_date=selected_appointment_date,
         )
 
     return render(
@@ -662,5 +738,6 @@ def manage_appointment_request(request, reference):
             "patient_profile": UserProfile.objects.filter(user=appointment_request.user).first(),
             "form": form,
             "assignment_form": assignment_form,
+            "selected_appointment_date": selected_appointment_date.isoformat(),
         },
     )

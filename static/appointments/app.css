@@ -337,10 +337,23 @@ button { cursor: pointer; }
 .admin-form-grid input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); }
 .admin-form-grid > .primary-button { justify-self: start; }
 .slot-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 15px; }
+.calendar-day-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px 0 14px; }
+.calendar-day-nav strong { color: var(--ink); font-size: 16px; }
+.calendar-day-picker { display: grid; max-width: 480px; gap: 7px; margin-top: 14px; }
+.calendar-day-picker label { font-weight: 700; }
+.calendar-day-picker > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.calendar-day-picker input { min-height: 40px; padding: 7px 10px; border: 1px solid #c8d5e7; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
 .assignment-card { grid-column: 1 / -1; }
 .assignment-management-form { max-width: 720px; margin-top: 14px; }
 .assignment-management-form label, .assignment-management-form small, .assignment-management-form button { grid-column: 1 / -1; }
 .assignment-management-form button { justify-self: start; }
+.calendar-slot-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; grid-column: 1 / -1; }
+.calendar-slot-choice { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; }
+.calendar-slot-choice:has(input:checked) { border-color: var(--blue); background: #f0f6ff; box-shadow: 0 0 0 2px #ddecff; }
+.calendar-slot-choice input { width: 17px; height: 17px; margin: 0; accent-color: var(--blue); }
+.assignment-management-form .empty-inline { grid-column: 1 / -1; }
+.alternative-date-confirm { display: flex; align-items: center; gap: 8px; }
+.alternative-date-confirm input { width: 18px; height: 18px; accent-color: var(--blue); }
 .cancel-assignment-form { margin-top: 14px; text-align: right; }
 .catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-items: start; }
 .catalog-card { min-width: 0; }

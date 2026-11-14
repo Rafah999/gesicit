@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
+from .constants import APPOINTMENT_SLOT_MINUTES
 from .models import (
     AppointmentRequest,
     AvailabilitySlot,
@@ -134,19 +138,21 @@ class RequestStatusForm(forms.ModelForm):
 class AppointmentSlotChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, slot):
         return (
-            f"{slot.starts_at:%d/%m/%Y %H:%M} · {slot.professional.full_name} · "
+            f"{timezone.localtime(slot.starts_at):%H:%M} · {slot.professional.full_name} · "
             f"{slot.institution.name}"
         )
 
 
 class AppointmentAssignmentForm(forms.Form):
+    appointment_date = forms.DateField(widget=forms.HiddenInput())
     slot = AppointmentSlotChoiceField(
         queryset=AvailabilitySlot.objects.none(),
-        label="Horario disponible",
-        empty_label="Selecciona fecha, hora e IPS",
+        label="Horarios de 30 minutos disponibles",
+        empty_label=None,
+        widget=forms.RadioSelect,
     )
 
-    def __init__(self, *args, appointment_request=None, **kwargs):
+    def __init__(self, *args, appointment_request=None, selected_date=None, **kwargs):
         super().__init__(*args, **kwargs)
         slots = AvailabilitySlot.objects.filter(
             is_available=True,
@@ -166,12 +172,26 @@ class AppointmentAssignmentForm(forms.Form):
                     required=False,
                     widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
                 )
+        requested_date = parse_date(str(self.data.get("appointment_date", ""))) if self.is_bound else None
+        self.selected_date = requested_date or selected_date
+        if self.selected_date is None and appointment_request and appointment_request.preferred_date:
+            self.selected_date = appointment_request.preferred_date
+        if self.selected_date is None:
+            first_slot = slots.order_by("starts_at").values_list("starts_at", flat=True).first()
+            self.selected_date = (
+                timezone.localtime(first_slot).date() if first_slot else timezone.localdate()
+            )
+        self.initial.setdefault("appointment_date", self.selected_date)
+        slots = slots.filter(starts_at__date=self.selected_date)
         self.fields["slot"].queryset = slots.order_by("starts_at")
 
     def clean(self):
         cleaned_data = super().clean()
         appointment_request = getattr(self, "appointment_request", None)
         slot = cleaned_data.get("slot")
+        selected_date = cleaned_data.get("appointment_date")
+        if slot and selected_date and timezone.localtime(slot.starts_at).date() != selected_date:
+            self.add_error("slot", "Selecciona un horario del día elegido en el calendario.")
         if appointment_request and appointment_request.preferred_date and slot:
             selected_date = timezone.localtime(slot.starts_at).date()
             if (
@@ -184,29 +204,34 @@ class AppointmentAssignmentForm(forms.Form):
                 )
         return cleaned_data
 
-class AvailabilitySlotForm(forms.ModelForm):
-    starts_at = forms.DateTimeField(
-        label="Fecha y hora",
-        input_formats=("%Y-%m-%dT%H:%M",),
-        widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "form-control"},
-            format="%Y-%m-%dT%H:%M",
-        ),
+class AvailabilityRangeForm(forms.Form):
+    service = forms.ModelChoiceField(
+        queryset=MedicalService.objects.none(),
+        label="Servicio",
+        widget=forms.Select(attrs={"class": "form-control"}),
     )
-
-    class Meta:
-        model = AvailabilitySlot
-        fields = ("service", "institution", "professional", "starts_at")
-        labels = {
-            "service": "Servicio",
-            "institution": "IPS",
-            "professional": "Profesional",
-        }
-        widgets = {
-            "service": forms.Select(attrs={"class": "form-control"}),
-            "institution": forms.Select(attrs={"class": "form-control"}),
-            "professional": forms.Select(attrs={"class": "form-control"}),
-        }
+    institution = forms.ModelChoiceField(
+        queryset=Institution.objects.none(),
+        label="IPS",
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    professional = forms.ModelChoiceField(
+        queryset=Professional.objects.none(),
+        label="Profesional",
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    appointment_date = forms.DateField(
+        label="Día",
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+    )
+    start_time = forms.TimeField(
+        label="Desde",
+        widget=forms.TimeInput(attrs={"type": "time", "step": "1800", "class": "form-control"}),
+    )
+    end_time = forms.TimeField(
+        label="Hasta (sin incluir)",
+        widget=forms.TimeInput(attrs={"type": "time", "step": "1800", "class": "form-control"}),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -214,11 +239,36 @@ class AvailabilitySlotForm(forms.ModelForm):
         self.fields["institution"].queryset = Institution.objects.filter(is_active=True).order_by("name")
         self.fields["professional"].queryset = Professional.objects.filter(is_active=True).order_by("full_name")
 
-    def clean_starts_at(self):
-        starts_at = self.cleaned_data["starts_at"]
-        if starts_at <= timezone.now():
-            raise forms.ValidationError("El horario debe estar en el futuro.")
-        return starts_at
+    def clean(self):
+        cleaned_data = super().clean()
+        appointment_date = cleaned_data.get("appointment_date")
+        start_time = cleaned_data.get("start_time")
+        end_time = cleaned_data.get("end_time")
+        professional = cleaned_data.get("professional")
+        service = cleaned_data.get("service")
+
+        if start_time and (start_time.minute not in (0, 30) or start_time.second or start_time.microsecond):
+            self.add_error("start_time", "Usa horas en intervalos de media hora, por ejemplo 08:00 o 08:30.")
+        if end_time and (end_time.minute not in (0, 30) or end_time.second or end_time.microsecond):
+            self.add_error("end_time", "Usa horas en intervalos de media hora, por ejemplo 16:00 o 16:30.")
+        if start_time and end_time:
+            start_dt = datetime.combine(appointment_date or timezone.localdate(), start_time)
+            end_dt = datetime.combine(appointment_date or timezone.localdate(), end_time)
+            duration = end_dt - start_dt
+            if duration <= timedelta(0):
+                self.add_error("end_time", "La hora final debe ser posterior a la hora inicial.")
+            elif duration.total_seconds() % (APPOINTMENT_SLOT_MINUTES * 60):
+                self.add_error("end_time", "El rango debe cerrar en un bloque de 30 minutos.")
+        if appointment_date and start_time:
+            local_start = timezone.make_aware(
+                datetime.combine(appointment_date, start_time),
+                timezone.get_current_timezone(),
+            )
+            if local_start <= timezone.now():
+                self.add_error("start_time", "La disponibilidad debe empezar en el futuro.")
+        if professional and service and not professional.services.filter(pk=service.pk).exists():
+            self.add_error("professional", "Ese profesional no está asociado al servicio seleccionado.")
+        return cleaned_data
 
 
 class MedicalServiceForm(forms.ModelForm):
