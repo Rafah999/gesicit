@@ -275,3 +275,15 @@ class RequestMessage(models.Model):
 
     def __str__(self):
         return f"Mensaje de solicitud {self.request_id}"
+
+class RequestPatientDetails(models.Model):
+    request = models.OneToOneField(AppointmentRequest, on_delete=models.CASCADE, related_name="patient_details")
+    full_name = models.CharField("nombre completo del paciente", max_length=150, blank=True)
+    document_type = models.CharField("tipo de documento", max_length=2, choices=[("CC", "Cédula de ciudadanía"), ("TI", "Tarjeta de identidad"), ("CE", "Cédula de extranjería")])
+    document_number = models.CharField("número de documento", max_length=12, blank=True)
+    contact_phone = models.CharField("teléfono de contacto", max_length=24, blank=True)
+    guardian_name = models.CharField("nombre del acudiente", max_length=150, blank=True)
+
+    @property
+    def masked_document(self):
+        return "•" * max(0, len(self.document_number) - 4) + self.document_number[-4:]
