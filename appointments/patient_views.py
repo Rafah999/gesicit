@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 from .patient_preferences import preferences_for
 from .patient_presentation import patient_requests, present_request, present_notification
-from .chat_logic import reply_to_message
+from .chat_intake import reply_to_message, options_for_flow
 from .forms import PatientProfileForm
 from .models import AppointmentRequest, Notification, MedicalService, Institution
 
@@ -20,14 +20,7 @@ def patient_chat(request):
     with transaction.atomic():
         reply, flow = reply_to_message(request.user, message, request.session.get('patient_chat_flow', {}))
     request.session['patient_chat_flow'] = flow
-    options = []
-    if flow.get('step') == 'service':
-        options = list(MedicalService.objects.filter(is_active=True).order_by('name').values_list('name', flat=True)[:8])
-    elif flow.get('step') == 'institution':
-        from django.utils import timezone
-        options = list(Institution.objects.filter(is_active=True, availability_slots__service_id=flow['service_id'], availability_slots__is_available=True, availability_slots__starts_at__gte=timezone.now()).distinct().order_by('name').values_list('name', flat=True)[:8]) + ['Omitir']
-    elif flow.get('step') == 'preferred_date':
-        options = ['Omitir']
+    options = options_for_flow(request.user, flow)
     return JsonResponse({'reply': reply, 'options': options, 'step': flow.get('step', '')})
 
 @login_required

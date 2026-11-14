@@ -50,6 +50,9 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'No se pudo enviar el mensaje.');
       message(data.reply);
+      input.maxLength = data.step === 'document_number' ? 12 : 1000;
+      input.inputMode = data.step === 'document_number' ? 'numeric' : data.step === 'contact_phone' ? 'tel' : 'text';
+      input.placeholder = data.step === 'document_number' ? 'Número de documento, sin puntos' : data.step === 'contact_phone' ? 'Teléfono de contacto' : data.step === 'preferred_date' ? 'Fecha preferida: DD/MM/AAAA' : 'Escribe tu mensaje aquí...';
       if (data.options.length) {
         const choices = document.createElement('div'); choices.className = 'patient-choices';
         data.options.forEach(option => { const button = document.createElement('button'); button.type = 'button'; button.dataset.message = option; button.textContent = option; choices.append(button); });
