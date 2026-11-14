@@ -1,0 +1,44 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Usuarios · GESECIT{% endblock %}
+{% block page_title %}Administración de usuarios{% endblock %}
+{% block page_subtitle %}Cuentas y permisos de GESECIT{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Administración</p><h2>Usuarios registrados</h2></div></div>
+
+<section class="metric-grid" aria-label="Resumen de usuarios">
+  <article class="metric-card blue"><span class="metric-icon">♙</span><div><strong>{{ total_users }}</strong><span>Total de cuentas</span></div></article>
+  <article class="metric-card green"><span class="metric-icon">＋</span><div><strong>{{ patient_count }}</strong><span>Pacientes</span></div></article>
+  <article class="metric-card amber"><span class="metric-icon">▣</span><div><strong>{{ admin_count }}</strong><span>Administradores</span></div></article>
+  <article class="metric-card red"><span class="metric-icon">★</span><div><strong>{{ superuser_count }}</strong><span>Superusuarios</span></div></article>
+</section>
+
+<section class="dashboard-card">
+  <div class="dashboard-card-head"><div><span class="section-icon">♙</span><h2>Lista de usuarios</h2></div><span class="muted-label">{{ total_users }} cuentas</span></div>
+  <div class="table-wrap">
+    <table class="staff-table user-table">
+      <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Registro</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for account in users %}
+          <tr>
+            <td><strong>{{ account.get_full_name|default:account.username }}</strong><span class="table-secondary">@{{ account.username }}</span></td>
+            <td>{{ account.email|default:"—" }}</td>
+            <td>{% if account.is_superuser %}<span class="role-pill role-superuser">Superusuario</span>{% elif account.is_staff %}<span class="role-pill role-admin">Administrador</span>{% else %}<span class="role-pill role-patient">Paciente</span>{% endif %}</td>
+            <td>{{ account.date_joined|date:"d/m/Y" }}</td>
+            <td>
+              {% if account.pk == request.user.pk %}<span class="muted-label">Sesión actual</span>
+              {% elif account.is_superuser %}<span class="muted-label">Cuenta protegida</span>
+              {% else %}
+                <div class="user-actions">
+                  <form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="admin" type="submit">Hacer admin</button></form>
+                  <form method="post" action="{% url 'change_user_role' account.pk %}">{% csrf_token %}<button class="small-primary" name="role" value="superuser" type="submit">Hacer superusuario</button></form>
+                  <form method="post" action="{% url 'delete_user' account.pk %}" onsubmit="return confirm('¿Eliminar esta cuenta y sus solicitudes asociadas?');">{% csrf_token %}<button class="small-danger" type="submit">Eliminar</button></form>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="5" class="empty-inline">Aún no hay cuentas registradas.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

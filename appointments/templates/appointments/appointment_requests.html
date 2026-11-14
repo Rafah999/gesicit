@@ -1,0 +1,49 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Solicitudes de citas · GESECIT{% endblock %}
+{% block page_title %}Panel administrativo{% endblock %}
+{% block page_subtitle %}Gestión y seguimiento de solicitudes de citas{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Solicitudes</p><h2>Solicitudes de citas recientes</h2></div></div>
+
+<section class="metric-grid" aria-label="Resumen de solicitudes">
+  <article class="metric-card blue"><span class="metric-icon">▣</span><div><strong>{{ total_requests }}</strong><span>Solicitudes totales</span></div></article>
+  <article class="metric-card amber"><span class="metric-icon">◷</span><div><strong>{{ pending_count|add:review_count }}</strong><span>Por revisar</span></div></article>
+  <article class="metric-card green"><span class="metric-icon">✓</span><div><strong>{{ approved_count }}</strong><span>Aprobadas</span></div></article>
+  <article class="metric-card red"><span class="metric-icon">×</span><div><strong>{{ rejected_count }}</strong><span>Rechazadas</span></div></article>
+</section>
+
+<section class="dashboard-card">
+  <div class="dashboard-card-head"><div><span class="section-icon">▣</span><h2>Solicitudes recibidas</h2></div><span class="muted-label">{{ pending_count }} pendientes · {{ review_count }} en revisión</span></div>
+  <form method="get" class="filter-toolbar">
+    <label>Buscar por afiliado o solicitud<input type="search" name="q" value="{{ query }}" placeholder="Nombre, usuario o código"></label>
+    <label>Estado<select name="estado"><option value="">Todos</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Fecha de registro<input type="date" name="fecha" value="{{ selected_date }}"></label>
+    <button class="small-primary filter-submit" type="submit">Filtrar</button>
+    <a class="quiet-button filter-clear" href="{% url 'admin_requests' %}">Limpiar</a>
+  </form>
+  <div class="table-wrap">
+    <table class="staff-table requests-table">
+      <thead><tr><th>N.º solicitud</th><th>Afiliado</th><th>Servicio e IPS</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for item in requests %}
+          <tr>
+            <td><code>{{ item.reference|slice:":8"|upper }}</code><span class="table-secondary">{{ item.created_at|date:"d/m/Y H:i" }}</span></td>
+            <td><strong>{{ item.user.get_full_name|default:item.user.username }}</strong><span class="table-secondary">{% if item.user.gesecit_profile.demo_member_code %}Afiliado: {{ item.user.gesecit_profile.demo_member_code }}{% else %}{{ item.user.email|default:item.user.username }}{% endif %}</span></td>
+            <td><strong>{{ item.service.name }}</strong><span class="table-secondary">{{ item.preferred_institution.name|default:"IPS por definir" }}</span></td>
+            <td>{% if item.active_assignment %}<strong>Asignada</strong><span class="table-secondary">{{ item.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</span>{% else %}{{ item.preferred_date|date:"d/m/Y"|default:"Por coordinar" }}{% endif %}</td>
+            <td><span class="status status-{{ item.status }}">{{ item.get_status_display }}</span></td>
+            <td><a class="outline-button table-action" href="{% url 'manage_appointment_request' item.reference %}">Ver y gestionar</a></td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="empty-inline">No hay solicitudes que coincidan con los filtros. Cuando se registren solicitudes, aparecerán aquí.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="dashboard-card recent-activity">
+  <div class="dashboard-card-head"><div><span class="section-icon">◷</span><h2>Actividad reciente</h2></div></div>
+  {% if recent_activity %}<ul class="activity-list">
+    {% for activity in recent_activity %}<li><i></i><span>La solicitud <strong>{{ activity.request.reference|slice:":8"|upper }}</strong> cambió a {{ activity.get_new_status_display }}.{% if activity.changed_by %}<small>Actualizada por {{ activity.changed_by.get_short_name|default:activity.changed_by.username }}</small>{% endif %}</span><small>{{ activity.changed_at|date:"d/m/Y H:i" }}</small></li>{% endfor %}
+  </ul>{% else %}<p class="empty-inline">Todavía no hay cambios de estado registrados.</p>{% endif %}
+</section>
+{% endblock %}

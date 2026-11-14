@@ -1,0 +1,44 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Panel administrativo · GESECIT{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'appointments/app.css' %}">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'admin_requests' %}">
+      <span class="brand-mark" aria-hidden="true">G</span>
+      <span class="brand-copy"><strong>GESECIT</strong><small>Asistente Digital</small><small>(Admin)</small></span>
+    </a>
+    <nav class="side-nav" aria-label="Administración">
+      <a class="{% if request.resolver_match.url_name == 'admin_requests' or request.resolver_match.url_name == 'manage_appointment_request' %}active{% endif %}" href="{% url 'admin_requests' %}"><span class="nav-icon">▣</span>Solicitudes de citas</a>
+      {% if request.user.is_superuser %}<a class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}"><span class="nav-icon">♙</span>Usuarios</a>{% endif %}
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <span class="avatar small">{{ request.user.get_short_name|default:request.user.username|slice:":1"|upper }}</span>
+        <span><strong>{{ request.user.get_short_name|default:request.user.username }}</strong><small>{% if request.user.is_superuser %}Superusuario{% else %}Personal administrativo{% endif %}</small></span>
+      </div>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit"><span class="nav-icon">⇥</span>Cerrar sesión</button></form>
+    </div>
+  </aside>
+
+  <div class="main-column">
+    <header class="workspace-header">
+      <div class="header-brand-icon" aria-hidden="true">♧</div>
+      <div class="header-title"><h1>{% block page_title %}Panel administrativo{% endblock %}</h1><p>{% block page_subtitle %}Gestión y seguimiento de solicitudes de citas{% endblock %}</p></div>
+      <div class="header-tools"><span class="online"><i></i>En línea</span><span class="avatar">{{ request.user.get_short_name|default:request.user.username|slice:":1"|upper }}</span></div>
+    </header>
+    <main class="page-content">
+      {% if messages %}<div class="messages" aria-live="polite">{% for message in messages %}<p class="message {{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+      {% block content %}{% endblock %}
+      <footer class="site-footer">Prototipo académico con información simulada. Las solicitudes no representan citas oficiales.</footer>
+    </main>
+  </div>
+</div>
+</body>
+</html>

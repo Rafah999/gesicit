@@ -1,0 +1,57 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Gestionar solicitud · GESECIT{% endblock %}
+{% block page_title %}Gestionar solicitud de cita{% endblock %}
+{% block page_subtitle %}Revisa la información y actualiza su estado{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Solicitud {{ appointment_request.reference|slice:":8"|upper }}</p><h2>Información de la solicitud</h2></div><a class="quiet-button" href="{% url 'admin_requests' %}">Volver a solicitudes</a></div>
+
+<div class="request-detail-grid">
+  <section class="dashboard-card patient-detail-card">
+    <div class="detail-avatar" aria-hidden="true">{{ appointment_request.user.get_short_name|default:appointment_request.user.username|slice:":1"|upper }}</div>
+    <p class="eyebrow">Afiliado</p>
+    <h2>{{ appointment_request.user.get_full_name|default:appointment_request.user.username }}</h2>
+    <p>{{ appointment_request.user.email|default:"Correo no registrado" }}</p>
+    <span class="muted-label">Usuario: {{ appointment_request.user.username }}</span>
+    {% if patient_profile.phone %}<span class="muted-label">Teléfono: {{ patient_profile.phone }}</span>{% endif %}
+    {% if patient_profile.demo_member_code %}<span class="muted-label">Código de afiliado: {{ patient_profile.demo_member_code }}</span>{% endif %}
+  </section>
+
+  <section class="dashboard-card request-detail-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">▣</span><h2>Solicitud N.º {{ appointment_request.reference|slice:":8"|upper }}</h2></div><span class="status status-{{ appointment_request.status }}">{{ appointment_request.get_status_display }}</span></div>
+    <dl class="request-detail-list">
+      <div><dt>Especialidad</dt><dd>{{ appointment_request.service.name }}</dd></div>
+      <div><dt>IPS preferida</dt><dd>{{ appointment_request.preferred_institution.name|default:"Sin preferencia" }}</dd></div>
+      <div><dt>Fecha solicitada</dt><dd>{{ appointment_request.preferred_date|date:"d/m/Y"|default:"Por coordinar" }}</dd></div>
+      <div><dt>Fecha de registro</dt><dd>{{ appointment_request.created_at|date:"d/m/Y · H:i" }}</dd></div>
+      {% if appointment_request.active_assignment %}
+        <div><dt>Cita asignada</dt><dd>{{ appointment_request.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</dd></div>
+        <div><dt>Profesional</dt><dd>{{ appointment_request.active_assignment.slot.professional.full_name }}</dd></div>
+        <div><dt>IPS asignada</dt><dd>{{ appointment_request.active_assignment.slot.institution.name }}</dd></div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="dashboard-card status-update-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">✓</span><h2>Actualizar estado</h2></div></div>
+    <form method="post" class="request-update-form">
+      {% csrf_token %}
+      <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+      {{ form.status }}
+      {% for error in form.status.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+      {{ form.note }}
+      {% for error in form.note.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      <button class="primary-button" type="submit">Guardar cambios</button>
+    </form>
+  </section>
+
+  <section class="dashboard-card history-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">◷</span><h2>Historial de cambios</h2></div></div>
+    {% if appointment_request.status_history.all %}<ul class="history-list">
+      {% for entry in appointment_request.status_history.all %}
+        <li><span class="history-dot"></span><div><strong>{{ entry.get_new_status_display }}</strong>{% if entry.note %}<p>{{ entry.note }}</p>{% endif %}<small>{{ entry.changed_at|date:"d/m/Y H:i" }}{% if entry.changed_by %} · {{ entry.changed_by.get_short_name|default:entry.changed_by.username }}{% endif %}</small></div></li>
+      {% endfor %}
+    </ul>{% else %}<p class="empty-inline">No hay cambios registrados para esta solicitud.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}
