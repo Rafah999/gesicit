@@ -1,0 +1,6 @@
+from datetime import time
+
+APPOINTMENT_SLOT_MINUTES = 30
+BUSINESS_START_TIME = time(8, 0)
+BUSINESS_END_TIME = time(17, 0)
+BUSINESS_DAYS = (0, 1, 2, 3, 4)

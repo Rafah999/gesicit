@@ -1,0 +1,4 @@
+<a class="outline-button table-action" href="{% url 'request_conversation' item.reference %}">Mensajes{% if item.unread_patient_messages %} · {{ item.unread_patient_messages }} nuevos{% endif %}</a>
+<form method="get" action="{% url 'request_conversation' item.reference %}" style="display:inline-block;margin:4px 0">
+<button type="submit" class="outline-button table-action">Contactar paciente{% with latest=item.communication_messages.last %}{% if latest and not latest.from_staff and not latest.read_at %} · Respuesta nueva{% endif %}{% endwith %}</button>
+</form>

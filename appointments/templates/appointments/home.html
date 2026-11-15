@@ -1,6 +1,7 @@
 {% extends 'appointments/base.html' %}
 {% block title %}Inicio · GESECIT{% endblock %}
 {% block content %}
+{% include 'appointments/patient/shell.html' %}
 <section class="welcome-card">
   <p class="eyebrow">Inicio</p>
   <h1>Bienvenido{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>

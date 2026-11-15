@@ -1,0 +1,15 @@
+﻿{% if appointment.scheduled_appointment %}
+<div class="patient-appointment">
+  <div class="patient-appointment-title"><svg><use href="#pi-calendar"/></svg><strong>Cita agendada</strong><span>Simulada</span></div>
+  <dl class="patient-medical-grid">
+    <div><dt>Fecha de atención</dt><dd>{{ appointment.scheduled_appointment.slot.starts_at|date:'l, d \d\e F \d\e Y' }}</dd></div>
+    <div><dt>Hora</dt><dd>{{ appointment.scheduled_appointment.slot.starts_at|date:'h:i a' }}</dd></div>
+    <div><dt>Profesional</dt><dd>{{ appointment.scheduled_appointment.slot.professional.full_name }}</dd></div>
+    <div><dt>Institución prestadora · IPS</dt><dd>{{ appointment.scheduled_appointment.slot.institution.name }}</dd></div>
+    <div class="patient-wide"><dt>Dirección de atención</dt><dd>{{ appointment.scheduled_appointment.slot.institution.address|default:'Por informar' }}{% if appointment.scheduled_appointment.slot.institution.city %} · {{ appointment.scheduled_appointment.slot.institution.city }}{% endif %}</dd></div>
+  </dl>
+</div>
+{% else %}
+<div class="patient-pending"><svg><use href="#pi-calendar"/></svg><div><strong>{% if appointment.status == 'rejected' %}Solicitud rechazada{% elif appointment.last_cancelled_appointment %}Cita cancelada{% else %}Pendiente de agendamiento{% endif %}</strong><p>{% if appointment.status == 'rejected' %}Consulta la observación de administración para conocer el motivo.{% elif appointment.last_cancelled_appointment %}La cita del {{ appointment.last_cancelled_appointment.slot.starts_at|date:'d/m/Y · H:i' }} fue cancelada. La solicitud continúa sin una fecha confirmada; administración puede asignar otro horario.{% else %}La fecha y hora de atención aparecerán cuando administración registre una asignación vigente.{% endif %}</p></div></div>
+<dl class="patient-medical-grid patient-preferences"><div><dt>Fecha preferida · sin reserva</dt><dd>{{ appointment.preferred_date|date:'d/m/Y'|default:'Sin preferencia' }}</dd></div><div><dt>IPS preferida</dt><dd>{{ appointment.preferred_institution.name|default:'Sin preferencia' }}</dd></div></dl>
+{% endif %}

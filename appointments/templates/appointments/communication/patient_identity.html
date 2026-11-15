@@ -1,0 +1,8 @@
+{% if appointment_request.patient_details %}
+<section class="dashboard-card" style="margin-top:24px;padding:24px"><h2>Identificación del paciente de la solicitud</h2><dl class="request-detail-list">
+{% if appointment_request.patient_details.full_name %}<div><dt>Nombre completo</dt><dd>{{ appointment_request.patient_details.full_name }}</dd></div>{% endif %}
+<div><dt>Tipo de documento</dt><dd>{{ appointment_request.patient_details.get_document_type_display }}</dd></div>
+{% if appointment_request.patient_details.document_number %}<div><dt>Número de documento</dt><dd>{{ appointment_request.patient_details.document_number }}</dd></div>{% endif %}
+{% if appointment_request.patient_details.contact_phone %}<div><dt>Teléfono de contacto</dt><dd>{{ appointment_request.patient_details.contact_phone }}</dd></div>{% endif %}
+{% if appointment_request.patient_details.guardian_name %}<div><dt>Acudiente</dt><dd>{{ appointment_request.patient_details.guardian_name }}</dd></div>{% endif %}
+</dl></section>{% endif %}

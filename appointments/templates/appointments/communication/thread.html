@@ -1,0 +1,22 @@
+{% extends parent_template %}
+{% load static %}
+{% block title %}Mensajes de la solicitud · GESECIT{% endblock %}
+{% block page_title %}Comunicación con el paciente{% endblock %}
+{% block page_subtitle %}Mensajes asociados a la solicitud{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'appointments/communication.css' %}">
+<section class="request-comms">
+  <header class="request-comms-header"><div><p>Solicitud {{ appointment.reference|stringformat:'s'|slice:':8'|upper }}</p><h1>{% if staff_view %}Comunicación con el paciente{% else %}Mensajes de administración{% endif %}</h1><p>{{ appointment.service.name }} · <strong>{{ appointment.get_status_display }}</strong></p>{% if staff_view %}<p>Paciente: {{ appointment.user.get_full_name|default:appointment.user.username }}</p>{% endif %}</div><a href="{% if staff_view %}{% url 'manage_appointment_request' appointment.reference %}{% else %}{% url 'home' %}{% endif %}" class="request-comms-back">Volver {% if staff_view %}a la solicitud{% else %}al asistente{% endif %}</a></header>
+  <p class="request-comms-info">{% if staff_view %}El mensaje llegará a la cuenta de {{ appointment.user.get_full_name|default:appointment.user.username }} y generará una notificación. El paciente puede responder desde los mensajes de su propia solicitud.{% else %}Aquí puedes consultar la información enviada por administración. La gestión de la solicitud corresponde al administrador.{% endif %}</p>
+  <div class="request-comms-log" aria-label="Historial de mensajes">
+  {% for entry in thread_messages %}
+    <article class="request-comms-message {% if entry.from_staff %}staff{% else %}patient{% endif %}"><div><strong>{% if entry.from_staff %}Administración{% else %}Paciente{% endif %}</strong><time>{{ entry.created_at|date:'d/m/Y H:i' }}</time></div><p>{{ entry.body }}</p><small>{% if entry.read_at %}Leído · {{ entry.read_at|date:'d/m/Y H:i' }}{% else %}Enviado{% endif %}</small></article>
+  {% empty %}<p class="request-comms-empty">Aún no hay mensajes.{% if staff_view %} Puedes enviar información al paciente a continuación.{% endif %}</p>{% endfor %}
+  </div>
+  {% if staff_view %}
+  <form method="post" class="request-comms-read">{% csrf_token %}<input type="hidden" name="action" value="read"><button type="submit">Marcar respuestas del paciente como leídas</button></form>
+  <form method="post" class="request-comms-form">{% csrf_token %}{{ message_form.as_p }}<p class="request-comms-hint">Máximo 2000 caracteres. Usa información ficticia; evita diagnósticos e historias clínicas.</p><button type="submit">Enviar mensaje {% if staff_view %}al paciente{% else %}a administración{% endif %}</button></form>
+  {% endif %}
+  <p class="request-comms-hint">Para consultar nuevos mensajes, actualiza esta página. Prototipo académico; las citas son simuladas.</p>
+</section>
+{% endblock %}

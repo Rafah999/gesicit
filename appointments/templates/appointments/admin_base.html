@@ -16,6 +16,8 @@
     </a>
     <nav class="side-nav" aria-label="Administración">
       <a class="{% if request.resolver_match.url_name == 'admin_requests' or request.resolver_match.url_name == 'manage_appointment_request' %}active{% endif %}" href="{% url 'admin_requests' %}"><span class="nav-icon">▣</span>Solicitudes de citas</a>
+      <a class="{% if request.resolver_match.url_name == 'admin_schedule' %}active{% endif %}" href="{% url 'admin_schedule' %}"><span class="nav-icon">◷</span>Agenda y horarios</a>
+      <a class="{% if request.resolver_match.url_name == 'admin_catalog' or request.resolver_match.url_name == 'edit_catalog_item' %}active{% endif %}" href="{% url 'admin_catalog' %}"><span class="nav-icon">▤</span>Catálogo</a>
       {% if request.user.is_superuser %}<a class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}"><span class="nav-icon">♙</span>Usuarios</a>{% endif %}
     </nav>
     <div class="sidebar-bottom">

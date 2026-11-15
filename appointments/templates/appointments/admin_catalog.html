@@ -1,0 +1,49 @@
+{% extends 'appointments/admin_base.html' %}
+{% block title %}Catálogo · GESECIT{% endblock %}
+{% block page_title %}Catálogo de atención{% endblock %}
+{% block page_subtitle %}Administra los servicios, las IPS y los profesionales disponibles{% endblock %}
+{% block content %}
+<div class="section-intro"><div><p class="eyebrow">Administración</p><h2>Datos para las solicitudes</h2></div></div>
+<p class="prototype-alert compact">Usa datos ficticios para la demostración. Desactivar un registro lo oculta de nuevas solicitudes y conserva el historial existente.</p>
+
+<div class="catalog-grid">
+  <section class="dashboard-card catalog-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">＋</span><h2>Servicios</h2></div></div>
+    <form method="post" class="admin-form-grid">
+      {% csrf_token %}<input type="hidden" name="kind" value="servicios">
+      {% for field in catalog_forms.servicios %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+      <button class="primary-button" type="submit">Agregar servicio</button>
+    </form>
+    <div class="catalog-list">
+      {% for item in services %}<article class="catalog-item"><div><strong>{{ item.name }}</strong><span class="table-secondary">{{ item.description|default:"Sin descripción" }}</span><span class="status {% if item.is_active %}status-approved{% else %}status-rejected{% endif %}">{% if item.is_active %}Activo{% else %}Inactivo{% endif %}</span></div><div class="catalog-actions"><a class="quiet-button" href="{% url 'edit_catalog_item' 'servicios' item.pk %}">Editar</a><form method="post" action="{% url 'toggle_catalog_item' 'servicios' item.pk %}">{% csrf_token %}<button class="{% if item.is_active %}small-danger{% else %}small-primary{% endif %}" type="submit">{% if item.is_active %}Desactivar{% else %}Activar{% endif %}</button></form></div></article>
+      {% empty %}<p class="empty-inline">No hay servicios registrados.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section class="dashboard-card catalog-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">＋</span><h2>IPS</h2></div></div>
+    <form method="post" class="admin-form-grid">
+      {% csrf_token %}<input type="hidden" name="kind" value="ips">
+      {% for field in catalog_forms.ips %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+      <button class="primary-button" type="submit">Agregar IPS</button>
+    </form>
+    <div class="catalog-list">
+      {% for item in institutions %}<article class="catalog-item"><div><strong>{{ item.name }}</strong><span class="table-secondary">{{ item.city|default:"Ciudad sin definir" }}{% if item.address %} · {{ item.address }}{% endif %}</span><span class="status {% if item.is_active %}status-approved{% else %}status-rejected{% endif %}">{% if item.is_active %}Activa{% else %}Inactiva{% endif %}</span></div><div class="catalog-actions"><a class="quiet-button" href="{% url 'edit_catalog_item' 'ips' item.pk %}">Editar</a><form method="post" action="{% url 'toggle_catalog_item' 'ips' item.pk %}">{% csrf_token %}<button class="{% if item.is_active %}small-danger{% else %}small-primary{% endif %}" type="submit">{% if item.is_active %}Desactivar{% else %}Activar{% endif %}</button></form></div></article>
+      {% empty %}<p class="empty-inline">No hay IPS registradas.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section class="dashboard-card catalog-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">＋</span><h2>Profesionales</h2></div></div>
+    <form method="post" class="admin-form-grid">
+      {% csrf_token %}<input type="hidden" name="kind" value="profesionales">
+      {% for field in catalog_forms.profesionales %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+      <button class="primary-button" type="submit">Agregar profesional</button>
+    </form>
+    <div class="catalog-list">
+      {% for item in professionals %}<article class="catalog-item"><div><strong>{{ item.full_name }}</strong><span class="table-secondary">{% for service in item.services.all %}{{ service.name }}{% if not forloop.last %}, {% endif %}{% empty %}Sin servicios asociados{% endfor %}</span><span class="status {% if item.is_active %}status-approved{% else %}status-rejected{% endif %}">{% if item.is_active %}Activo{% else %}Inactivo{% endif %}</span></div><div class="catalog-actions"><a class="quiet-button" href="{% url 'edit_catalog_item' 'profesionales' item.pk %}">Editar</a><form method="post" action="{% url 'toggle_catalog_item' 'profesionales' item.pk %}">{% csrf_token %}<button class="{% if item.is_active %}small-danger{% else %}small-primary{% endif %}" type="submit">{% if item.is_active %}Desactivar{% else %}Activar{% endif %}</button></form></div></article>
+      {% empty %}<p class="empty-inline">No hay profesionales registrados.</p>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

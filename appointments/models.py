@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class UserProfile(models.Model):
@@ -94,6 +95,16 @@ class AvailabilitySlot(models.Model):
 
     def __str__(self):
         return f"{self.service} · {self.starts_at:%d/%m/%Y %H:%M} · {self.institution} · {self.professional}"
+
+    @property
+    def is_bookable(self):
+        return (
+            self.is_available
+            and self.starts_at > timezone.now()
+            and self.service.is_active
+            and self.institution.is_active
+            and self.professional.is_active
+        )
 
     def clean(self):
         super().clean()
@@ -260,3 +271,30 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+# Mensajes administrativos asociados a una solicitud, sin alterar sus estados.
+class RequestMessage(models.Model):
+    request = models.ForeignKey(AppointmentRequest, on_delete=models.CASCADE, related_name="communication_messages")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="sent_request_messages")
+    from_staff = models.BooleanField(default=False)
+    body = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("created_at", "pk")
+
+    def __str__(self):
+        return f"Mensaje de solicitud {self.request_id}"
+
+class RequestPatientDetails(models.Model):
+    request = models.OneToOneField(AppointmentRequest, on_delete=models.CASCADE, related_name="patient_details")
+    full_name = models.CharField("nombre completo del paciente", max_length=150, blank=True)
+    document_type = models.CharField("tipo de documento", max_length=2, choices=[("CC", "Cédula de ciudadanía"), ("TI", "Tarjeta de identidad"), ("CE", "Cédula de extranjería")])
+    document_number = models.CharField("número de documento", max_length=12, blank=True)
+    contact_phone = models.CharField("teléfono de contacto", max_length=24, blank=True)
+    guardian_name = models.CharField("nombre del acudiente", max_length=150, blank=True)
+
+    @property
+    def masked_document(self):
+        return "•" * max(0, len(self.document_number) - 4) + self.document_number[-4:]

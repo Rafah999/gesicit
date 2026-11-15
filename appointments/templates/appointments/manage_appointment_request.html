@@ -1,7 +1,7 @@
 {% extends 'appointments/admin_base.html' %}
 {% block title %}Gestionar solicitud · GESECIT{% endblock %}
 {% block page_title %}Gestionar solicitud de cita{% endblock %}
-{% block page_subtitle %}Revisa la información y actualiza su estado{% endblock %}
+{% block page_subtitle %}Revisa la solicitud y, al elegir un horario, apruébala y registra la cita en un solo paso{% endblock %}
 {% block content %}
 <div class="section-intro"><div><p class="eyebrow">Solicitud {{ appointment_request.reference|slice:":8"|upper }}</p><h2>Información de la solicitud</h2></div><a class="quiet-button" href="{% url 'admin_requests' %}">Volver a solicitudes</a></div>
 
@@ -21,28 +21,58 @@
     <dl class="request-detail-list">
       <div><dt>Especialidad</dt><dd>{{ appointment_request.service.name }}</dd></div>
       <div><dt>IPS preferida</dt><dd>{{ appointment_request.preferred_institution.name|default:"Sin preferencia" }}</dd></div>
-      <div><dt>Fecha solicitada</dt><dd>{{ appointment_request.preferred_date|date:"d/m/Y"|default:"Por coordinar" }}</dd></div>
+      <div><dt>Fecha preferida por el paciente</dt><dd>{{ appointment_request.preferred_date|date:"d/m/Y"|default:"Sin preferencia" }}{% if appointment_request.preferred_date %} · no confirmada{% endif %}</dd></div>
       <div><dt>Fecha de registro</dt><dd>{{ appointment_request.created_at|date:"d/m/Y · H:i" }}</dd></div>
       {% if appointment_request.active_assignment %}
-        <div><dt>Cita asignada</dt><dd>{{ appointment_request.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</dd></div>
+        <div><dt>Fecha y hora de la cita confirmada</dt><dd>{{ appointment_request.active_assignment.slot.starts_at|date:"d/m/Y · H:i" }}</dd></div>
         <div><dt>Profesional</dt><dd>{{ appointment_request.active_assignment.slot.professional.full_name }}</dd></div>
         <div><dt>IPS asignada</dt><dd>{{ appointment_request.active_assignment.slot.institution.name }}</dd></div>
       {% endif %}
     </dl>
   </section>
 
-  <section class="dashboard-card status-update-card">
-    <div class="dashboard-card-head"><div><span class="section-icon">✓</span><h2>Actualizar estado</h2></div></div>
-    <form method="post" class="request-update-form">
+  <section class="dashboard-card assignment-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">◷</span><h2>Agenda de la cita</h2></div></div>
+    {% if appointment_request.active_assignment %}
+      <div class="assignment-summary">
+        <strong>Horario confirmado · {{ appointment_request.active_assignment.slot.starts_at|date:"l d/m/Y · H:i" }}</strong>
+        <span>{{ appointment_request.active_assignment.slot.service.name }} · {{ appointment_request.active_assignment.slot.professional.full_name }}</span>
+        <small>{{ appointment_request.active_assignment.slot.institution.name }}{% if appointment_request.active_assignment.slot.institution.address %} · {{ appointment_request.active_assignment.slot.institution.address }}{% endif %}</small>
+      </div>
+    {% else %}
+      <p class="muted-label">La fecha que indicó el paciente es una preferencia; la cita queda confirmada cuando elijas un horario disponible.</p>
+    {% endif %}
+    <div class="calendar-day-picker" data-availability-url="{% url 'request_availability' appointment_request.reference %}">
+      <label for="appointment-day">Día de atención</label>
+      <div><input id="appointment-day" type="date" value="{{ selected_appointment_date }}" min="{{ today_iso }}" required><button class="small-primary" id="show-availability" type="button">Ver horarios</button></div>
+    </div>
+    <form method="post" id="assignment-form" class="admin-form-grid assignment-management-form">
       {% csrf_token %}
-      <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
-      {{ form.status }}
-      {% for error in form.status.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-      <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
-      {{ form.note }}
-      {% for error in form.note.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-      <button class="primary-button" type="submit">Guardar cambios</button>
+      <input type="hidden" name="action" value="assign_slot">
+      {{ assignment_form.appointment_date }}
+      <input type="hidden" id="selected-slot" name="{{ assignment_form.slot.html_name }}" value="{{ assignment_form.slot.value|default:'' }}">
+      <strong>{% if appointment_request.active_assignment %}Selecciona un nuevo horario para reprogramar{% else %}Horarios disponibles · bloques de 30 minutos{% endif %}</strong>
+      <p id="selected-slot-summary" class="selected-slot-summary" aria-live="polite">Selecciona un horario en “Ver horarios”.</p>
+      {% for error in assignment_form.slot.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      {% for error in assignment_form.appointment_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      {% if assignment_form.alternative_date_confirmed %}<label class="alternative-date-confirm"><span>{{ assignment_form.alternative_date_confirmed }}</span>{{ assignment_form.alternative_date_confirmed.label }}</label>{% for error in assignment_form.alternative_date_confirmed.errors %}<small class="field-error">{{ error }}</small>{% endfor %}<small class="muted-label">Si eliges otra fecha, marca la casilla solo después de coordinarlo con el paciente.</small>{% endif %}
+      <button class="primary-button" id="save-appointment" type="submit" {% if not assignment_form.slot.value %}disabled{% endif %}>{% if appointment_request.active_assignment %}Guardar reprogramación{% else %}Aprobar y registrar cita{% endif %}</button>
     </form>
+    <dialog class="availability-modal" id="availability-modal" aria-labelledby="availability-title">
+      <div class="availability-modal-head">
+        <div><p class="eyebrow">Disponibilidad</p><h2 id="availability-title">Horarios para <span id="availability-date"></span></h2><p id="availability-hours" class="muted-label"></p></div>
+        <button class="quiet-button" id="close-availability" type="button" aria-label="Cerrar horarios">Cerrar</button>
+      </div>
+      <p class="availability-legend"><span><i class="legend-dot available"></i>Disponible</span><span><i class="legend-dot occupied"></i>Ocupado</span><span><i class="legend-dot empty"></i>Sin cupo publicado</span></p>
+      <p id="availability-message" class="empty-inline" aria-live="polite" hidden></p>
+      <div id="availability-times" class="availability-time-grid" aria-live="polite"></div>
+    </dialog>
+    {% if appointment_request.active_assignment %}
+      <form method="post" class="cancel-assignment-form" onsubmit="return confirm('¿Cancelar esta cita? El horario futuro quedará disponible nuevamente.');">
+        {% csrf_token %}<input type="hidden" name="action" value="cancel_assignment">
+        <button class="small-danger" type="submit">Cancelar cita asignada</button>
+      </form>
+    {% endif %}
   </section>
 
   <section class="dashboard-card history-card">
@@ -53,5 +83,143 @@
       {% endfor %}
     </ul>{% else %}<p class="empty-inline">No hay cambios registrados para esta solicitud.</p>{% endif %}
   </section>
+
+  <section class="dashboard-card history-card">
+    <div class="dashboard-card-head"><div><span class="section-icon">↻</span><h2>Historial de agenda</h2></div></div>
+    <ul class="history-list">
+      {% for assignment in appointment_request.assignments.all %}
+        {% for event in assignment.history.all %}
+          <li><span class="history-dot"></span><div><strong>{{ event.get_event_display }}</strong><p>{{ event.detail }}</p><small>{{ event.created_at|date:"d/m/Y H:i" }}{% if event.changed_by %} · {{ event.changed_by.get_short_name|default:event.changed_by.username }}{% endif %}</small></div></li>
+        {% endfor %}
+      {% empty %}<li class="empty-inline">Aún no se ha asignado una cita.</li>{% endfor %}
+    </ul>
+  </section>
 </div>
+{% include 'appointments/communication/admin_entry.html' %}
+{% include 'appointments/communication/patient_identity.html' %}
+<script>
+(() => {
+  const picker = document.querySelector(".calendar-day-picker");
+  const dateInput = document.getElementById("appointment-day");
+  const hiddenDate = document.getElementById("id_appointment_date");
+  const hiddenSlot = document.getElementById("selected-slot");
+  const saveButton = document.getElementById("save-appointment");
+  const csrfToken = document.querySelector("#assignment-form [name=csrfmiddlewaretoken]").value;
+  const summary = document.getElementById("selected-slot-summary");
+  const modal = document.getElementById("availability-modal");
+  const timeGrid = document.getElementById("availability-times");
+  const message = document.getElementById("availability-message");
+  const dateHeading = document.getElementById("availability-date");
+  const hoursHeading = document.getElementById("availability-hours");
+  const apiUrl = picker.dataset.availabilityUrl;
+
+  function clearSelection() {
+    hiddenSlot.value = "";
+    hiddenDate.value = dateInput.value;
+    summary.textContent = "Selecciona un horario en “Ver horarios”.";
+    saveButton.disabled = true;
+  }
+
+  function showStatus(item) {
+    const status = document.createElement("div");
+    status.className = `availability-slot-status ${item.state}`;
+    status.textContent = item.label ? `${item.state_label} · ${item.label}` : item.state_label;
+    return status;
+  }
+
+  function renderAvailability(data, selectedSlotId = "") {
+    timeGrid.replaceChildren();
+    message.hidden = true;
+    dateHeading.textContent = data.date_label;
+    hoursHeading.textContent = [data.business_hours, data.notice].filter(Boolean).join(" · ");
+
+    if (data.closed) {
+      message.textContent = "No hay atención programada los fines de semana. Selecciona un día de lunes a viernes.";
+      message.hidden = false;
+      return false;
+    }
+
+    let restoredSelection = false;
+    data.times.forEach((block) => {
+      const card = document.createElement("section");
+      card.className = "availability-time-card";
+      const title = document.createElement("h3");
+      title.textContent = block.time;
+      card.append(title);
+
+      block.items.forEach((item) => {
+        if (item.state === "available") {
+          const option = document.createElement("button");
+          option.type = "button";
+          option.className = "availability-slot-option";
+          option.textContent = `Disponible · ${item.label}`;
+          option.addEventListener("click", () => {
+            hiddenDate.value = dateInput.value;
+            hiddenSlot.value = item.slot_id;
+            summary.textContent = `${data.date_label} · ${block.time} · ${item.label}`;
+            saveButton.disabled = false;
+            modal.close();
+          });
+          card.append(option);
+          if (selectedSlotId && String(item.slot_id) === String(selectedSlotId)) {
+            hiddenDate.value = dateInput.value;
+            hiddenSlot.value = item.slot_id;
+            summary.textContent = `${data.date_label} · ${block.time} · ${item.label}`;
+            saveButton.disabled = false;
+            restoredSelection = true;
+          }
+        } else {
+          card.append(showStatus(item));
+        }
+      });
+      timeGrid.append(card);
+    });
+    return restoredSelection;
+  }
+
+  async function loadAvailability(openModal = true, selectedSlotId = "") {
+    if (!dateInput.reportValidity()) return;
+    hiddenDate.value = dateInput.value;
+    if (openModal) {
+      modal.showModal();
+      dateHeading.textContent = "…";
+      hoursHeading.textContent = "Consultando disponibilidad";
+      timeGrid.replaceChildren();
+      message.hidden = true;
+    }
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": csrfToken,
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body: new URLSearchParams({ fecha: dateInput.value }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "No fue posible consultar los horarios.");
+      const restored = renderAvailability(data, selectedSlotId);
+      if (selectedSlotId && !restored) {
+        hiddenSlot.value = "";
+        saveButton.disabled = true;
+        summary.textContent = "El horario seleccionado ya no está disponible. Elige otro en “Ver horarios”.";
+      }
+    } catch (error) {
+      if (openModal) {
+        message.textContent = error.message || "Error al consultar la disponibilidad.";
+        message.hidden = false;
+      }
+    }
+  }
+
+  dateInput.addEventListener("change", clearSelection);
+  document.getElementById("show-availability").addEventListener("click", () => loadAvailability());
+  document.getElementById("close-availability").addEventListener("click", () => modal.close());
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.close();
+  });
+  if (hiddenSlot.value) loadAvailability(false, hiddenSlot.value);
+})();
+</script>
 {% endblock %}
