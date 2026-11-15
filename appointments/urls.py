@@ -23,6 +23,11 @@ urlpatterns = [
         views.manage_appointment_request,
         name="manage_appointment_request",
     ),
+    path(
+        "administracion/solicitudes/<uuid:reference>/disponibilidad/",
+        views.request_availability,
+        name="request_availability",
+    ),
     path("administracion/usuarios/<int:user_id>/rol/", views.change_user_role, name="change_user_role"),
     path("administracion/usuarios/<int:user_id>/estado/", views.toggle_user_active, name="toggle_user_active"),
     path("administracion/usuarios/<int:user_id>/eliminar/", views.delete_user, name="delete_user"),

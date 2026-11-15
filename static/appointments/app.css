@@ -232,12 +232,7 @@ button { cursor: pointer; }
 .request-detail-list div { min-width: 0; }
 .request-detail-list dt { color: var(--muted); font-size: 12px; }
 .request-detail-list dd { margin: 3px 0 0; font-weight: 700; overflow-wrap: anywhere; }
-.status-update-card, .history-card { min-width: 0; }
-.request-update-form { display: grid; gap: 8px; }
-.request-update-form label { margin-top: 5px; font-weight: 700; }
-.request-update-form select, .request-update-form input, .request-update-form textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #c8d5e7; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
-.request-update-form textarea { min-height: 94px; resize: vertical; }
-.request-update-form button { justify-self: end; margin-top: 7px; }
+.history-card { min-width: 0; }
 .history-list { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
 .history-list li { display: flex; gap: 10px; }
 .history-dot { width: 10px; height: 10px; flex: 0 0 auto; margin-top: 6px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px #e5f0ff; }
@@ -354,6 +349,27 @@ button { cursor: pointer; }
 .assignment-management-form .empty-inline { grid-column: 1 / -1; }
 .alternative-date-confirm { display: flex; align-items: center; gap: 8px; }
 .alternative-date-confirm input { width: 18px; height: 18px; accent-color: var(--blue); }
+.selected-slot-summary { grid-column: 1 / -1; margin: 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: #f7faff; color: var(--ink); }
+.assignment-management-form button:disabled { cursor: not-allowed; opacity: .55; }
+.availability-modal { width: min(940px, calc(100vw - 32px)); max-width: none; max-height: 86vh; margin: auto; padding: 22px; overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: #f6f8fc; color: var(--ink); box-shadow: 0 22px 70px #071b3840; }
+.availability-modal::backdrop { background: #0b1b34a6; backdrop-filter: blur(2px); }
+.availability-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.availability-modal-head .eyebrow { margin: 0 0 4px; }
+.availability-modal-head h2 { margin: 0; font-size: 21px; }
+.availability-modal-head .muted-label { margin: 5px 0 0; }
+.availability-legend { display: flex; flex-wrap: wrap; gap: 13px; margin: 15px 0; color: var(--muted); font-size: 13px; }
+.availability-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; background: #14804a; }
+.legend-dot.occupied { background: #c23445; }
+.legend-dot.empty { background: #9aa8bb; }
+#availability-message[hidden] { display: none; }
+.availability-time-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 9px; }
+.availability-time-card { display: grid; align-content: start; gap: 6px; min-height: 95px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+.availability-time-card h3 { margin: 0 0 2px; color: var(--ink); font-size: 17px; }
+.availability-slot-option, .availability-slot-status { display: block; width: 100%; padding: 8px 9px; border: 1px solid #b8e0c8; border-radius: 8px; background: #eef9f2; color: #17653a; text-align: left; font: inherit; font-size: 12px; line-height: 1.35; }
+.availability-slot-option:hover, .availability-slot-option:focus-visible { border-color: #198450; background: #dcf3e5; }
+.availability-slot-status.occupied { border-color: #f2c5ca; background: #fff1f2; color: #a52231; }
+.availability-slot-status.unavailable, .availability-slot-status.past, .availability-slot-status.empty { border-color: #dce3ed; background: #f3f5f8; color: #64748b; }
 .cancel-assignment-form { margin-top: 14px; text-align: right; }
 .catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-items: start; }
 .catalog-card { min-width: 0; }
@@ -376,4 +392,7 @@ button { cursor: pointer; }
 @media (max-width: 560px) {
   .admin-form-grid, .slot-create-form { grid-template-columns: 1fr; }
   .catalog-item { align-items: flex-start; flex-direction: column; }
+  .availability-modal { max-height: 92vh; padding: 15px; }
+  .availability-time-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .availability-modal-head h2 { font-size: 17px; }
 }

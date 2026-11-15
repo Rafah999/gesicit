@@ -6,7 +6,12 @@ from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from .constants import APPOINTMENT_SLOT_MINUTES
+from .constants import (
+    APPOINTMENT_SLOT_MINUTES,
+    BUSINESS_DAYS,
+    BUSINESS_END_TIME,
+    BUSINESS_START_TIME,
+)
 from .models import (
     AppointmentRequest,
     AvailabilitySlot,
@@ -120,19 +125,6 @@ class PatientProfileForm(forms.ModelForm):
                 },
             )
         return user
-
-
-class RequestStatusForm(forms.ModelForm):
-    note = forms.CharField(
-        label="Observación (opcional)",
-        max_length=200,
-        required=False,
-    )
-
-    class Meta:
-        model = AppointmentRequest
-        fields = ("status",)
-        labels = {"status": "Nuevo estado"}
 
 
 class AppointmentSlotChoiceField(forms.ModelChoiceField):
@@ -251,6 +243,12 @@ class AvailabilityRangeForm(forms.Form):
             self.add_error("start_time", "Usa horas en intervalos de media hora, por ejemplo 08:00 o 08:30.")
         if end_time and (end_time.minute not in (0, 30) or end_time.second or end_time.microsecond):
             self.add_error("end_time", "Usa horas en intervalos de media hora, por ejemplo 16:00 o 16:30.")
+        if appointment_date and appointment_date.weekday() not in BUSINESS_DAYS:
+            self.add_error("appointment_date", "La atención está configurada de lunes a viernes.")
+        if start_time and start_time < BUSINESS_START_TIME:
+            self.add_error("start_time", "El horario laboral comienza a las 08:00.")
+        if end_time and end_time > BUSINESS_END_TIME:
+            self.add_error("end_time", "El horario laboral termina a las 17:00.")
         if start_time and end_time:
             start_dt = datetime.combine(appointment_date or timezone.localdate(), start_time)
             end_dt = datetime.combine(appointment_date or timezone.localdate(), end_time)

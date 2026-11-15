@@ -14,7 +14,7 @@
 
 <section class="dashboard-card">
   <div class="dashboard-card-head"><div><span class="section-icon">＋</span><h2>Crear disponibilidad</h2></div></div>
-  <p class="muted-label">El rango se divide en citas consecutivas de 30 minutos. La hora final no se incluye: por ejemplo, 08:00 a 10:00 crea cuatro horarios.</p>
+  <p class="muted-label">La jornada está configurada de lunes a viernes, de 08:00 a 17:00. El rango se divide en citas de 30 minutos; la hora final no se incluye: 08:00 a 10:00 crea cuatro horarios.</p>
   <form method="post" class="admin-form-grid slot-create-form">
     {% csrf_token %}<input type="hidden" name="action" value="create_range">
     {% for field in slot_form %}<div class="admin-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
